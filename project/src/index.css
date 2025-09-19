@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Primary (Deep Blue) */
+  --cyber-grape: #0077B6;
+  /* Accent (Bright Yellow) */
+  --persimmon: #FFB703;
+  /* Secondary / Background (Soft Sky Blue) */
+  --isabelline: #90E0EF;
+  /* Text (Almost Black) */
+  --dark-gunmetal: #1A1A1A;
+  /* Success/Progress (kept) */
+  --caribbean-green: #00CC99;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--isabelline);
+  color: var(--dark-gunmetal);
+  line-height: 1.6;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--isabelline);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--cyber-grape);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #236B45; /* sea green dark */
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-cyber-grape hover:bg-cyber-grape-dark text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+}
+
+.btn-secondary {
+  @apply bg-persimmon hover:bg-persimmon-dark text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+}
+
+.btn-success {
+  @apply bg-caribbean-green hover:bg-caribbean-green-dark text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200;
+}
+
+/* Card styles */
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all duration-200;
+}
+
+/* Progress bar */
+.progress-bar {
+  @apply bg-caribbean-green;
+}
+
+/* Text colors */
+.text-primary {
+  @apply text-cyber-grape;
+}
+
+.text-secondary {
+  @apply text-persimmon;
+}
+
+.text-success {
+  @apply text-caribbean-green;
+}
+
+.text-dark {
+  @apply text-dark-gunmetal;
+}
+
+/* Background colors */
+.bg-primary {
+  @apply bg-cyber-grape;
+}
+
+.bg-secondary {
+  @apply bg-persimmon;
+}
+
+.bg-success {
+  @apply bg-caribbean-green;
+}
+
+.bg-light {
+  @apply bg-isabelline;
+}

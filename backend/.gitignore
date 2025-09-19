@@ -1,0 +1,28 @@
+# Ignore public/videos directory
+public/videos/
+
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Environment files
+.env
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Build output
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# Miscellaneous
+*.swp
+*.swo
