@@ -125,7 +125,9 @@ router.get('/course/:courseId/can-review', auth, async (req, res) => {
 router.post('/', auth, async (req, res) => {
   try {
     const { courseId, rating, title, comment } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
+
+    console.log('Creating review:', { courseId, rating, title, comment, userId });
 
     // Validate required fields
     if (!courseId || !rating || !title || !comment) {
@@ -141,9 +143,18 @@ router.post('/', auth, async (req, res) => {
       });
     }
 
+    // Check if course exists
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ 
+        message: 'Course not found' 
+      });
+    }
+
     // Check if user can review
     const canReview = await Review.canUserReview(userId, courseId);
     if (!canReview.canReview) {
+      console.log('User cannot review:', canReview.reason);
       return res.status(400).json({ 
         message: 'You cannot review this course',
         reason: canReview.reason
@@ -162,6 +173,8 @@ router.post('/', auth, async (req, res) => {
 
     await review.save();
     await review.populate('user', 'username firstName lastName profilePicture');
+
+    console.log('Review created successfully:', review._id);
 
     res.status(201).json({
       message: 'Review created successfully',
@@ -185,7 +198,7 @@ router.put('/:reviewId', auth, async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { rating, title, comment } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Find review
     const review = await Review.findById(reviewId);
@@ -194,7 +207,7 @@ router.put('/:reviewId', auth, async (req, res) => {
     }
 
     // Check if user owns the review
-    if (review.user.toString() !== userId) {
+    if (review.user.toString() !== userId.toString()) {
       return res.status(403).json({ message: 'Not authorized to update this review' });
     }
 
@@ -231,7 +244,7 @@ router.put('/:reviewId', auth, async (req, res) => {
 router.delete('/:reviewId', auth, async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Find review
     const review = await Review.findById(reviewId);
@@ -240,7 +253,7 @@ router.delete('/:reviewId', auth, async (req, res) => {
     }
 
     // Check if user owns the review or is admin
-    if (review.user.toString() !== userId && req.user.role !== 'admin') {
+    if (review.user.toString() !== userId.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized to delete this review' });
     }
 
@@ -259,7 +272,7 @@ router.delete('/:reviewId', auth, async (req, res) => {
 router.post('/:reviewId/helpful', auth, async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Find review
     const review = await Review.findById(reviewId);
@@ -268,7 +281,7 @@ router.post('/:reviewId/helpful', auth, async (req, res) => {
     }
 
     // Check if user is trying to mark their own review as helpful
-    if (review.user.toString() === userId) {
+    if (review.user.toString() === userId.toString()) {
       return res.status(400).json({ 
         message: 'You cannot mark your own review as helpful' 
       });
@@ -294,7 +307,7 @@ router.post('/:reviewId/report', auth, async (req, res) => {
   try {
     const { reviewId } = req.params;
     const { reason } = req.body;
-    const userId = req.user.id;
+    const userId = req.user._id;
 
     // Validate reason
     const validReasons = ['inappropriate', 'spam', 'fake', 'other'];

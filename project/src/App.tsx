@@ -1,7 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate} from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { CourseProvider } from './contexts/CourseContext';
+import { CourseProvider, useCourses } from './contexts/CourseContext';
 import HomePage from './components/HomePage';
 import Dashboard from './components/Dashboard';
 import CourseDetail from './components/CourseDetail';
@@ -17,35 +17,87 @@ import AdminCourses from './components/AdminCourses';
 import Profile from './components/Profile.tsx';
 import Settings from './components/Settings.tsx';
 
+// Course wrapper component to handle slug-to-course resolution
+function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
+  const { courseSlug } = useParams();
+  const { courses } = useCourses();
+  const [course, setCourse] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const findCourse = async () => {
+      setLoading(true);
+      
+      // First try to find in context courses
+      let foundCourse = courses.find(c => 
+        c.id === courseSlug || 
+        c._id === courseSlug ||
+        c.title.toLowerCase().replace(/[^a-z0-9]/g, '-') === courseSlug
+      );
+
+      // If not found in context, try API
+      if (!foundCourse && courseSlug) {
+        try {
+          const token = localStorage.getItem('authToken');
+          const headers: any = {};
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+
+          // Try by slug first
+          let response = await fetch(`http://localhost:5000/api/courses/slug/${courseSlug}`, {
+            headers
+          });
+
+          if (!response.ok) {
+            // Fallback: try by ID
+            response = await fetch(`http://localhost:5000/api/courses/${courseSlug}`, {
+              headers
+            });
+          }
+
+          if (response.ok) {
+            foundCourse = await response.json();
+          }
+        } catch (error) {
+          console.error('Error fetching course:', error);
+        }
+      }
+
+      setCourse(foundCourse);
+      setLoading(false);
+    };
+
+    findCourse();
+  }, [courseSlug, courses]);
+
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!course) {
+    return (
+      <div className="min-h-screen bg-isabelline flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-dark-gunmetal mb-4">Course Not Found</h1>
+          <p className="text-gray-600 mb-4">The course you're looking for doesn't exist.</p>
+          <Navigate to="/dashboard" replace />
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children(course)}</>;
+}
+
 
 function AppContent() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  // Optionally, you can use context for selectedCourse/selectedLesson if needed globally
-  const [selectedCourse, setSelectedCourse] = React.useState<any>(null);
-  const [selectedLesson, setSelectedLesson] = React.useState<any>(null);
-  
-  // Function to refresh course data after assessment completion
-  const refreshCourseData = async (courseId: string) => {
-    if (!courseId) return;
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      if (token) {
-        const response = await fetch(`http://localhost:5000/api/courses/${courseId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (response.ok) {
-          const updatedCourse = await response.json();
-          setSelectedCourse(updatedCourse);
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing course data:', error);
-    }
+
+  // Helper function to generate course slug
+  const getCourseSlug = (course: any) => {
+    return course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
   };
 
   if (loading) {
@@ -62,104 +114,125 @@ function AppContent() {
           <Route path="/" element={
             <HomePage
               onCourseSelect={(course) => {
-                setSelectedCourse(course);
-                navigate(`/courses/${(course as any)._id || course.id}`);
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                navigate(`/courses/${courseSlug}`);
               }}
             />
           } />
           <Route path="/dashboard" element={
             <Dashboard
               onCourseSelect={(course) => {
-                setSelectedCourse(course);
-                navigate(`/courses/${(course as any)._id || course.id}`);
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                navigate(`/courses/${courseSlug}`);
               }}
               onViewCertificate={(course) => {
-                setSelectedCourse(course);
-                navigate(`/courses/${(course as any)._id || course.id}/certificate`);
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                navigate(`/courses/${courseSlug}/certificate`);
               }}
             />
           } />
           <Route path="/recommendations" element={
             <Recommendations
               onCourseSelect={(course) => {
-                setSelectedCourse(course);
-                navigate(`/courses/${(course as any)._id}`);
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                navigate(`/courses/${courseSlug}`);
               }}
             />
           } />
           <Route path="/all-courses" element={
             <AllCourses
               onCourseSelect={(course) => {
-                setSelectedCourse(course);
-                navigate(`/courses/${(course as any)._id}`);
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                navigate(`/courses/${courseSlug}`);
               }}
             />
           } />
           <Route path="/admin-courses" element={<AdminCourses />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/courses/:courseId" element={
-            <CourseDetail
-              course={selectedCourse}
-              onLessonSelect={(lesson) => {
-                setSelectedLesson(lesson);
-                navigate(`/courses/${selectedCourse?._id}/lessons/${lesson._id}`);
-              }}
-              onAssessmentStart={async () => {
-                // Always refresh course data before starting assessment
-                if (selectedCourse?._id) {
-                  await refreshCourseData(selectedCourse._id);
-                }
-                navigate(`/courses/${selectedCourse?._id}/assessment`);
-              }}
-              onAssessmentComplete={async () => {
-                // This will handle the async update when returning from assessment
-                if (selectedCourse?._id) {
-                  await refreshCourseData(selectedCourse._id);
-                }
-              }}
-              onBack={() => navigate('/dashboard')}
-            />
+          <Route path="/courses/:courseSlug" element={
+            <CourseWrapper>
+              {(course) => (
+                <CourseDetail
+                  course={course}
+                  onLessonSelect={(lesson) => {
+                    const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                    navigate(`/courses/${courseSlug}/lessons/${lesson._id || lesson.id}`);
+                  }}
+                  onAssessmentStart={() => {
+                    const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                    navigate(`/courses/${courseSlug}/assessment`);
+                  }}
+                  onAssessmentComplete={() => {
+                    // This will handle the async update when returning from assessment
+                  }}
+                  onBack={() => navigate('/dashboard')}
+                />
+              )}
+            </CourseWrapper>
           } />
-          <Route path="/courses/:courseId/lessons/:lessonId" element={
-            <VideoPlayer
-              lesson={selectedLesson}
-              course={selectedCourse}
-              onComplete={() => navigate(`/courses/${selectedCourse?._id}`)}
-              onBack={() => navigate(`/courses/${selectedCourse?._id}`)}
-            />
-          } />
-          <Route path="/courses/:courseId/assessment" element={
-            <Assessment
-              course={selectedCourse}
-              onComplete={async (passed) => {
-                // Refresh the course data first
-                if (selectedCourse?._id) {
-                  await refreshCourseData(selectedCourse._id);
-                }
+          <Route path="/courses/:courseSlug/lessons/:lessonId" element={
+            <CourseWrapper>
+              {(course) => {
+                const { lessonId } = useParams();
+                const lesson = course.lessons?.find((l: any) => l._id === lessonId || l.id === lessonId);
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
                 
-                if (passed) {
-                  // Show certificate on successful completion
-                  navigate(`/courses/${selectedCourse?._id}/certificate`);
-                } else {
-                  // Go back to course page
-                  navigate(`/courses/${selectedCourse?._id}`);
-                }
+                return (
+                  <VideoPlayer
+                    lesson={lesson}
+                    course={course}
+                    onComplete={() => navigate(`/courses/${courseSlug}`)}
+                    onBack={() => navigate(`/courses/${courseSlug}`)}
+                  />
+                );
               }}
-              onBack={() => navigate(`/courses/${selectedCourse?._id}`)}
-            />
+            </CourseWrapper>
           } />
-          <Route path="/courses/:courseId/complete" element={
-            <CourseCompletion
-              course={selectedCourse}
-              onBack={() => navigate(`/courses/${selectedCourse?._id}`)}
-            />
+          <Route path="/courses/:courseSlug/assessment" element={
+            <CourseWrapper>
+              {(course) => {
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                
+                return (
+                  <Assessment
+                    course={course}
+                    onComplete={async (passed) => {
+                      if (passed) {
+                        navigate(`/courses/${courseSlug}/certificate`);
+                      } else {
+                        navigate(`/courses/${courseSlug}`);
+                      }
+                    }}
+                    onBack={() => navigate(`/courses/${courseSlug}`)}
+                  />
+                );
+              }}
+            </CourseWrapper>
           } />
-          <Route path="/courses/:courseId/certificate" element={
-            <Certificate
-              course={selectedCourse}
-              onBack={() => navigate('/dashboard')}
-            />
+          <Route path="/courses/:courseSlug/complete" element={
+            <CourseWrapper>
+              {(course) => {
+                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                
+                return (
+                  <CourseCompletion
+                    course={course}
+                    onBack={() => navigate(`/courses/${courseSlug}`)}
+                  />
+                );
+              }}
+            </CourseWrapper>
+          } />
+          <Route path="/courses/:courseSlug/certificate" element={
+            <CourseWrapper>
+              {(course) => (
+                <Certificate
+                  course={course}
+                  onBack={() => navigate('/dashboard')}
+                />
+              )}
+            </CourseWrapper>
           } />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

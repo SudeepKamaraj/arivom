@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CheckCircle, Award, Star, X, MessageSquare } from 'lucide-react';
 import ReviewForm from './ReviewForm';
 
@@ -21,6 +21,13 @@ const CourseCompletionModal: React.FC<CourseCompletionModalProps> = ({
   const [showReviewForm, setShowReviewForm] = useState(true);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
+  // Debug information
+  useEffect(() => {
+    if (isOpen) {
+      console.log('CourseCompletionModal opened with:', { courseId, courseTitle });
+    }
+  }, [isOpen, courseId, courseTitle]);
+
   const handleSubmitReview = async (reviewData: { rating: number; title: string; comment: string }) => {
     try {
       setIsSubmittingReview(true);
@@ -31,6 +38,8 @@ const CourseCompletionModal: React.FC<CourseCompletionModalProps> = ({
         setIsSubmittingReview(false);
         return;
       }
+      
+      console.log('Submitting review:', { courseId, ...reviewData });
       
       // Using the same port as the server
       const response = await fetch('http://localhost:5000/api/reviews', {
@@ -46,6 +55,7 @@ const CourseCompletionModal: React.FC<CourseCompletionModalProps> = ({
       });
 
       const responseData = await response.json();
+      console.log('Review response:', responseData);
       
       if (response.ok) {
         setShowReviewForm(false);
@@ -55,13 +65,30 @@ const CourseCompletionModal: React.FC<CourseCompletionModalProps> = ({
         setTimeout(() => {
           onClose();
           // Show feedback to the user using a browser alert for now
-          alert("Thank you for your review!");
+          alert("Thank you for your review! Your feedback helps other students.");
         }, 500);
       } else {
-        alert(responseData.message || 'Failed to submit review');
+        console.error('Review submission failed:', responseData);
+        let errorMessage = 'Failed to submit review';
+        
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        
+        // Handle specific error cases
+        if (responseData.reason === 'already_reviewed') {
+          errorMessage = 'You have already reviewed this course';
+        } else if (responseData.reason === 'course_not_completed') {
+          errorMessage = 'You must complete the course before writing a review';
+        } else if (responseData.reason === 'not_enrolled') {
+          errorMessage = 'You must be enrolled in the course to write a review';
+        }
+        
+        alert(errorMessage);
       }
     } catch (error) {
-      alert('Failed to submit review. Please try again later.');
+      console.error('Review submission error:', error);
+      alert('Failed to submit review. Please check your connection and try again.');
     } finally {
       setIsSubmittingReview(false);
     }

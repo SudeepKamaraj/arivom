@@ -17,7 +17,7 @@ interface Review {
     firstName: string;
     lastName: string;
     profilePicture?: string;
-  };
+  } | null; // Make user optional to handle null cases
   createdAt: string;
   updatedAt: string;
 }
@@ -43,10 +43,19 @@ const ReviewCard: React.FC<ReviewCardProps> = ({
   const [showMenu, setShowMenu] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState('');
+  
+  // Add defensive check for invalid review data
+  if (!review || !review._id) {
+    console.warn('Invalid review data:', review);
+    return null;
+  }
+  
   console.log("Review:", review);
-  // Fix: handle case where review.user is null
-  const isOwnReview = user && review.user && review.user._id === (user as any).id;
-  const hasMarkedHelpful = user && review.helpful.users.includes((user as any).id);
+  
+  // Fix: handle case where review.user is null and use consistent user ID access
+  const userId = (user as any)?._id || (user as any)?.id;
+  const isOwnReview = user && review.user && review.user._id === userId;
+  const hasMarkedHelpful = user && review.helpful && review.helpful.users && review.helpful.users.includes(userId);
   const canMarkHelpful = user && !isOwnReview;
 
   const formatDate = (dateString: string) => {

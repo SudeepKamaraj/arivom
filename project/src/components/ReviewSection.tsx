@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Plus, Filter, SortAsc, MessageSquare } from 'lucide-react';
+import { Star, Filter, SortAsc, MessageSquare, Lock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ReviewCard from './ReviewCard';
 import ReviewForm from './ReviewForm';
@@ -19,7 +19,7 @@ interface Review {
     firstName: string;
     lastName: string;
     profilePicture?: string;
-  };
+  } | null; // Make user optional to handle null cases
   createdAt: string;
   updatedAt: string;
 }
@@ -63,12 +63,21 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
       const data = await response.json();
 
       if (response.ok) {
-        setReviews(data.reviews);
-        setCurrentPage(data.pagination.currentPage);
-        setTotalPages(data.pagination.totalPages);
+        // Filter out any invalid reviews on the frontend as well
+        const validReviews = (data.reviews || []).filter((review: any) => 
+          review && review._id && typeof review.rating === 'number'
+        );
+        
+        setReviews(validReviews);
+        setCurrentPage(data.pagination?.currentPage || 1);
+        setTotalPages(data.pagination?.totalPages || 1);
+      } else {
+        console.error('Failed to fetch reviews:', data);
+        setReviews([]);
       }
     } catch (error) {
       console.error('Error fetching reviews:', error);
+      setReviews([]);
     } finally {
       setIsLoading(false);
     }
@@ -85,32 +94,149 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
   };
 
   const checkCanReview = async () => {
-    if (!user) return;
+    console.log('=== REVIEW ELIGIBILITY CHECK ===');
+    console.log('Checking if user can review:', { user: !!user, courseId, reviewsCount: reviews.length });
+    
+    if (!user) {
+      console.log('No user logged in, cannot review');
+      setCanReview(false);
+      return;
+    }
 
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:5000/api/reviews/course/${courseId}/can-review`, {
+      console.log('Auth token exists:', !!token);
+      
+      if (!token) {
+        console.log('No auth token found');
+        setCanReview(false);
+        return;
+      }
+
+      console.log('Fetching course status for courseId:', courseId);
+
+      // Check if user has completed the course
+      const statusResponse = await fetch(`http://localhost:5000/api/courses/${courseId}/status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
-      const data = await response.json();
-      setCanReview(data.canReview);
+
+      console.log('Course status response status:', statusResponse.status);
+
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json();
+        console.log('Course completion status data:', statusData);
+        
+        // Check multiple conditions for completion
+        const isCompleted = statusData.completed || 
+                           statusData.progress >= 100 ||
+                           (statusData.debug && statusData.debug.enrollment && statusData.debug.enrollment.certificateEarned);
+        
+        console.log('Computed completion status:', isCompleted);
+        
+        if (!isCompleted) {
+          console.log('Course not completed according to backend, cannot review');
+          
+          // Additional check: look for local completion indicators
+          const localProgress = localStorage.getItem(`progress_${(user as any)._id || (user as any).id}_${courseId}`);
+          console.log('Local progress data:', localProgress);
+          
+          // If we have local completion indicators but backend doesn't recognize it,
+          // try to trigger course completion
+          if (localProgress) {
+            console.log('Found local progress, attempting to trigger course completion...');
+            await triggerCourseCompletion();
+            // Recheck after triggering completion
+            return checkCanReview();
+          }
+          
+          setCanReview(false);
+          return;
+        } else {
+          console.log('Course is completed according to backend');
+        }
+      } else {
+        const errorText = await statusResponse.text();
+        console.log('Could not fetch course status:', statusResponse.status, errorText);
+        
+        // Fallback: check local storage for completion
+        const userId = (user as any)._id || (user as any).id;
+        const completedKey = `completed_${userId}`;
+        const completedCourses = JSON.parse(localStorage.getItem(completedKey) || '[]');
+        const isLocallyCompleted = completedCourses.includes(courseId);
+        
+        console.log('Fallback to local completion check:', isLocallyCompleted);
+        
+        if (!isLocallyCompleted) {
+          setCanReview(false);
+          return;
+        }
+      }
+      
+      // Check if user has already reviewed this course
+      const userReview = reviews.find(review => 
+        review.user && review.user._id === ((user as any)._id || (user as any).id)
+      );
+      
+      console.log('User review found:', !!userReview);
+      
+      if (userReview) {
+        console.log('User has already reviewed, disabling review button');
+        setCanReview(false);
+      } else {
+        console.log('User can review (course completed and no existing review)');
+        setCanReview(true);
+      }
+      
     } catch (error) {
       console.error('Error checking review eligibility:', error);
+      setCanReview(false);
+    }
+  };
+
+  const triggerCourseCompletion = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      console.log('Triggering course completion for courseId:', courseId);
+      
+      const response = await fetch(`http://localhost:5000/api/courses/${courseId}/complete`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Course completion triggered successfully:', data);
+      } else {
+        const errorText = await response.text();
+        console.log('Failed to trigger course completion:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('Error triggering course completion:', error);
     }
   };
 
   useEffect(() => {
     fetchReviews();
     fetchRatingData();
+  }, [courseId]);
+
+  useEffect(() => {
     checkCanReview();
-  }, [courseId, user]);
+  }, [user, reviews]); // Check after reviews are loaded
 
   const handleSubmitReview = async (reviewData: { rating: number; title: string; comment: string }) => {
     try {
       setIsSubmitting(true);
       const token = localStorage.getItem('authToken');
+      
+      console.log('Submitting review:', { courseId, ...reviewData });
       
       const response = await fetch('http://localhost:5000/api/reviews', {
         method: 'POST',
@@ -124,18 +250,37 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
         })
       });
 
+      const responseData = await response.json();
+      console.log('Review submission response:', responseData);
+
       if (response.ok) {
         setShowReviewForm(false);
         fetchReviews();
         fetchRatingData();
         checkCanReview();
+        alert('Thank you for your review! It has been submitted successfully.');
       } else {
-        const errorData = await response.json();
-        alert(errorData.message || 'Failed to submit review');
+        console.error('Review submission failed:', responseData);
+        let errorMessage = 'Failed to submit review';
+        
+        if (responseData.message) {
+          errorMessage = responseData.message;
+        }
+        
+        // Handle specific error cases
+        if (responseData.reason === 'already_reviewed') {
+          errorMessage = 'You have already reviewed this course';
+        } else if (responseData.reason === 'course_not_completed') {
+          errorMessage = 'You must complete more of the course before writing a review';
+        } else if (responseData.reason === 'not_enrolled') {
+          errorMessage = 'You must be enrolled in the course to write a review';
+        }
+        
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('Error submitting review:', error);
-      alert('Failed to submit review');
+      alert('Failed to submit review. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -241,15 +386,71 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
           </h2>
         </div>
         
-        {canReview && (
-          <button
-            onClick={() => setShowReviewForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Write Review</span>
-          </button>
-        )}
+        <div className="flex items-center space-x-4">
+          {canReview && (
+            <div className="flex flex-col space-y-3">
+              <div className="bg-isabelline rounded-lg p-4 border-l-4 border-cyber-grape">
+                <p className="text-dark-gunmetal font-medium flex items-center">
+                  <Star className="w-5 h-5 text-persimmon mr-2" />
+                  Course Completed!
+                </p>
+                <p className="text-sm text-dark-gunmetal/70 mt-2">
+                  You've successfully completed this course. Share your experience to help other students.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReviewForm(true)}
+                className="flex items-center space-x-2 px-6 py-3 bg-amber-400 hover:bg-amber-500 text-white rounded-lg font-semibold transition-colors"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Write a Review</span>
+              </button>
+            </div>
+          )}
+          
+          {!canReview && user && (
+            <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-400">
+              <p className="text-yellow-800 font-medium flex items-center">
+                <Lock className="w-5 h-5 text-yellow-600 mr-2" />
+                {reviews.find(review => review.user && review.user._id === ((user as any)._id || (user as any).id)) 
+                  ? 'Already Reviewed' 
+                  : 'Complete Course to Review'}
+              </p>
+              <p className="text-sm text-yellow-700 mt-2">
+                {reviews.find(review => review.user && review.user._id === ((user as any)._id || (user as any).id)) 
+                  ? 'You have already written a review for this course.' 
+                  : 'You must complete the entire course (including any assessments) before you can write a review.'}
+              </p>
+              <button
+                onClick={() => {
+                  console.log('Manually refreshing review eligibility...');
+                  checkCanReview();
+                }}
+                className="mt-3 mr-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm font-medium transition-colors"
+              >
+                Refresh Status
+              </button>
+              <button
+                onClick={async () => {
+                  console.log('Attempting to sync course completion...');
+                  await triggerCourseCompletion();
+                  setTimeout(() => checkCanReview(), 1000);
+                }}
+                className="mt-3 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium transition-colors"
+              >
+                Sync Completion
+              </button>
+            </div>
+          )}
+          
+          {!canReview && !user && (
+            <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-gray-300">
+              <p className="text-gray-600 font-medium">
+                Please log in to write a review
+              </p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Rating Summary */}
@@ -346,7 +547,9 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
         </div>
       ) : reviews.length > 0 ? (
         <div className="space-y-4">
-          {reviews.map((review) => (
+          {reviews
+            .filter(review => review && review._id) // Filter out any invalid reviews
+            .map((review) => (
             <ReviewCard
               key={review._id}
               review={review}

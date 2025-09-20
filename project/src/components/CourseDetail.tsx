@@ -112,7 +112,8 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
           
           if (response.ok) {
             const results = await response.json();
-            const userResults = results.filter((r: any) => r.userId._id === user.id);
+            const userId = (user as any)._id || (user as any).id;
+            const userResults = results.filter((r: any) => r.userId && r.userId._id === userId);
             setHasAttemptedAssessment(userResults.length > 0);
           }
         }
@@ -359,16 +360,6 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 </div>
               </div>
             )}
-
-            {/* Debug Info */}
-            <div className="mt-4 p-3 bg-gray-100 rounded text-xs">
-              <p><strong>Debug Info:</strong></p>
-              <p>Progress: {progress}%</p>
-              <p>Completed: {completedLessons}/{totalLessons}</p>
-              <p>Has Assessments: {hasAssessments ? 'Yes' : 'No'}</p>
-              <p>Is Completed: {isCompleted ? 'Yes' : 'No'}</p>
-              <p>Show Assessment: {shouldShowAssessment ? 'Yes' : 'No'}</p>
-            </div>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
-import { ArrowLeft, Clock, CheckCircle, XCircle, Award, Save, AlertCircle, Star, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle, XCircle, Award, Save, AlertCircle, Star } from 'lucide-react';
 import CourseCompletionModal from './CourseCompletionModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,7 +23,7 @@ interface AssessmentResult {
 
 const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) => {
   const { user } = useAuth();
-  const { completeCourse } = useCourses();
+  const { completeCourse, getCourseProgress } = useCourses();
   const navigate = useNavigate();
   
   // Get questions from course assessments or generate fallback
@@ -38,11 +38,21 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
   const [savedProgress, setSavedProgress] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [courseProgress, setCourseProgress] = useState(0);
 
   useEffect(() => {
     // Load questions from course assessments
     loadAssessmentQuestions();
-  }, [course]);
+    
+    // Check current course progress
+    if (user && course) {
+      const courseId = course._id || course.id;
+      const userId = (user as any).id || (user as any)._id;
+      const currentProgress = getCourseProgress(courseId, userId);
+      setCourseProgress(currentProgress);
+      console.log('Course progress at assessment time:', currentProgress);
+    }
+  }, [course, user, getCourseProgress]);
 
   useEffect(() => {
     if (questions.length > 0) {
@@ -483,27 +493,37 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
                 <span className="font-semibold">Certificate Generated!</span>
               </div>
               
-              {/* Feedback box */}
-              <div className="bg-isabelline rounded-lg p-4 mb-4 border-l-4 border-cyber-grape">
-                <p className="text-dark-gunmetal font-medium flex items-center">
-                  <Star className="w-5 h-5 text-persimmon mr-2" />
-                  Your feedback is valuable!
-                </p>
-                <p className="text-sm text-dark-gunmetal/70 mt-2">
-                  Please consider sharing your experience with this course to help other students.
-                </p>
-              </div>
+              {/* Only show completion message if both course content AND assessment are completed */}
+              {courseProgress >= 100 && (
+                <>
+                  {/* Feedback box - shown after course and assessment completion */}
+                  <div className="bg-isabelline rounded-lg p-4 mb-4 border-l-4 border-cyber-grape">
+                    <p className="text-dark-gunmetal font-medium flex items-center">
+                      <Star className="w-5 h-5 text-persimmon mr-2" />
+                      Course & Assessment Completed!
+                    </p>
+                    <p className="text-sm text-dark-gunmetal/70 mt-2">
+                      You've successfully completed both the course content and assessment. Congratulations on earning your certificate!
+                    </p>
+                  </div>
+                </>
+              )}
               
-              {/* Write a Review button - using button instead of anchor tag */}
-              <div className="flex justify-center mb-6">
-                <button 
-                  onClick={() => setShowCompletionModal(true)}
-                  className="flex items-center justify-center space-x-2 px-8 py-4 bg-amber-400 hover:bg-amber-500 text-white rounded-lg font-bold text-lg transition-colors shadow-md cursor-pointer"
-                >
-                  <MessageSquare className="w-6 h-6" />
-                  <span>Write a Review</span>
-                </button>
-              </div>
+              {/* Show message if assessment passed but course content not fully completed */}
+              {courseProgress < 100 && (
+                <div className="bg-yellow-50 rounded-lg p-4 mb-4 border-l-4 border-yellow-400">
+                  <p className="text-yellow-800 font-medium flex items-center">
+                    <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
+                    Assessment Passed!
+                  </p>
+                  <p className="text-sm text-yellow-700 mt-2">
+                    You've passed the assessment, but please make sure to complete all course videos before writing a review. This ensures you have the full learning experience.
+                  </p>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Course Progress: {courseProgress}% complete
+                  </p>
+                </div>
+              )}
             </>
           )}
 

@@ -96,6 +96,53 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get course by slug
+router.get('/slug/:slug', async (req, res) => {
+  try {
+    const slug = req.params.slug;
+    console.log('Slug endpoint called with:', slug);
+    
+    let course = null;
+    
+    // Check if slug is a valid ObjectId (24 characters, hexadecimal)
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(slug) && slug.length === 24) {
+      // Try to find course by ID first (for backward compatibility)
+      course = await Course.findById(slug).populate('instructor', 'username firstName lastName');
+      console.log('Course found by ID:', !!course);
+    }
+    
+    if (!course) {
+      // If not found by ID, try to find by matching title-based slug
+      const courses = await Course.find().populate('instructor', 'username firstName lastName');
+      console.log('Total courses found:', courses.length);
+      
+      // Debug: Show all course slugs
+      courses.forEach(c => {
+        const courseSlug = c.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        console.log(`Course "${c.title}" -> slug "${courseSlug}"`);
+      });
+      
+      course = courses.find(c => {
+        const courseSlug = c.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        console.log(`Comparing "${courseSlug}" with "${slug}": ${courseSlug === slug}`);
+        return courseSlug === slug;
+      });
+      
+      console.log('Course found by slug:', !!course);
+    }
+    
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    res.json(course);
+  } catch (err) {
+    console.error('Get course by slug error:', err);
+    res.status(500).json({ message: 'Failed to fetch course' });
+  }
+});
+
 router.get('/:courseId', async (req, res) => {
   try {
     const course = await Course.findById(req.params.courseId);
@@ -220,7 +267,7 @@ router.post('/:courseId/complete', auth, async (req, res) => {
     }
     
     // Check for passed assessment if required
-    if (course.hasAssessment) {
+    if (course.assessments && course.assessments.length > 0) {
       // Find the user's latest assessment for this course
       const Assessment = require('../models/Assessment');
       const latestAssessment = await Assessment.findOne({
@@ -263,26 +310,76 @@ router.get('/:courseId/status', auth, async (req, res) => {
     const courseId = req.params.courseId;
     const userId = req.user._id;
     
+    console.log('=== COURSE STATUS CHECK ===');
+    console.log('CourseId:', courseId);
+    console.log('UserId:', userId);
+    
     const course = await Course.findById(courseId);
     if (!course) {
+      console.log('Course not found');
       return res.status(404).json({ message: 'Course not found' });
     }
+    
+    console.log('Course found:', course.title);
+    console.log('Course has assessments:', course.assessments && course.assessments.length > 0);
     
     // Find user enrollment
     const enrollment = course.enrolledStudents.find(
       es => es.student?.toString() === userId.toString()
     );
     
+    console.log('User enrollment found:', !!enrollment);
+    if (enrollment) {
+      console.log('Enrollment details:', {
+        progress: enrollment.progress,
+        certificateEarned: enrollment.certificateEarned,
+        completedVideos: enrollment.completedVideos?.length || 0,
+        completedAssessments: enrollment.completedAssessments?.length || 0
+      });
+    }
+    
+    // Check assessments if they exist
+    if (course.assessments && course.assessments.length > 0) {
+      const Assessment = require('../models/Assessment');
+      const assessments = await Assessment.find({
+        userId: userId,
+        courseId: courseId
+      }).sort({ completedAt: -1 });
+      
+      console.log('Assessments found:', assessments.length);
+      assessments.forEach((assessment, index) => {
+        console.log(`Assessment ${index + 1}:`, {
+          passed: assessment.passed,
+          score: assessment.score,
+          completedAt: assessment.completedAt
+        });
+      });
+      
+      const passedAssessment = assessments.find(a => a.passed);
+      console.log('Has passed assessment:', !!passedAssessment);
+    }
+    
     const isEnrolled = !!enrollment;
     const isCompleted = enrollment?.certificateEarned || false;
     const progress = enrollment?.progress || 0;
+    
+    console.log('Final status:', { isEnrolled, isCompleted, progress });
     
     res.json({
       enrolled: isEnrolled,
       completed: isCompleted,
       progress: progress,
       totalStudents: course.enrolledStudents.length,
-      completedStudents: course.enrolledStudents.filter(es => es.certificateEarned).length
+      completedStudents: course.enrolledStudents.filter(es => es.certificateEarned).length,
+      debug: {
+        courseId,
+        userId: userId.toString(),
+        hasAssessments: course.assessments && course.assessments.length > 0,
+        enrollment: enrollment ? {
+          progress: enrollment.progress,
+          certificateEarned: enrollment.certificateEarned
+        } : null
+      }
     });
   } catch (err) {
     console.error('Get course status error:', err);
@@ -313,6 +410,58 @@ router.delete('/:courseId', auth, requireInstructor, async (req, res) => {
   } catch (err) {
     console.error('Delete course error:', err);
     res.status(500).json({ message: 'Failed to delete course' });
+  }
+});
+
+// Manual course completion for testing/debugging
+router.post('/:courseId/force-complete', auth, async (req, res) => {
+  try {
+    const courseId = req.params.courseId;
+    const userId = req.user._id;
+    
+    console.log('=== FORCE COMPLETE COURSE ===');
+    console.log('CourseId:', courseId);
+    console.log('UserId:', userId);
+    
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+    
+    // Find user enrollment or create one
+    let enrollment = course.enrolledStudents.find(
+      es => es.student?.toString() === userId.toString()
+    );
+    
+    if (!enrollment) {
+      enrollment = {
+        student: userId,
+        enrolledAt: new Date(),
+        progress: 100,
+        completedVideos: [],
+        completedAssessments: [],
+        certificateEarned: false
+      };
+      course.enrolledStudents.push(enrollment);
+    }
+    
+    // Force mark as completed
+    enrollment.certificateEarned = true;
+    enrollment.certificateEarnedAt = new Date();
+    enrollment.progress = 100;
+    
+    await course.save();
+    
+    console.log('Course force-completed successfully');
+    
+    res.json({ 
+      message: 'Course force-completed successfully',
+      completed: true,
+      debug: 'This was a manual completion for testing'
+    });
+  } catch (err) {
+    console.error('Force complete error:', err);
+    res.status(500).json({ message: 'Failed to force complete course' });
   }
 });
 
