@@ -314,7 +314,24 @@ router.get('/:courseId/status', auth, async (req, res) => {
     console.log('CourseId:', courseId);
     console.log('UserId:', userId);
     
-    const course = await Course.findById(courseId);
+    let course = null;
+    
+    // Check if courseId is a valid ObjectId (24 characters, hexadecimal)
+    const mongoose = require('mongoose');
+    if (mongoose.Types.ObjectId.isValid(courseId) && courseId.length === 24) {
+      // Try to find course by ID first
+      course = await Course.findById(courseId);
+    }
+    
+    if (!course) {
+      // If not found by ID, try to find by matching title-based slug
+      const courses = await Course.find();
+      course = courses.find(c => {
+        const courseSlug = c.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        return courseSlug === courseId;
+      });
+    }
+    
     if (!course) {
       console.log('Course not found');
       return res.status(404).json({ message: 'Course not found' });

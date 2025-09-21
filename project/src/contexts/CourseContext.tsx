@@ -506,13 +506,33 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateLessonProgress = useCallback((courseId: string, lessonId: string, userId: string) => {
     if (!userId) return;
+    
+    // Update the progress map for this lesson
     const lessonProgressKey = `progress_${userId}_${courseId}`;
     const progressMap = JSON.parse(localStorage.getItem(lessonProgressKey) || '{}');
     if (!progressMap[lessonId]) {
       progressMap[lessonId] = true;
       localStorage.setItem(lessonProgressKey, JSON.stringify(progressMap));
+      
+      // Check and log video completion progress
+      const course = courses.find((c) => c._id === courseId || c.id === courseId);
+      if (course) {
+        const lessons = course.lessons || course.videos || [];
+        if (lessons.length > 0) {
+          // Count completed lessons
+          const completedCount = lessons.reduce((acc, lesson) => {
+            const lessonId = lesson._id || lesson.id;
+            return acc + (progressMap[lessonId] ? 1 : 0);
+          }, 0);
+          
+          // Log progress but don't auto-complete the course
+          if (completedCount === lessons.length) {
+            console.log('All videos completed! Video progress 100%, but course requires assessment completion.');
+          }
+        }
+      }
     }
-  }, []);
+  }, [courses]);
 
   const setLastLessonId = useCallback((courseId: string, userId: string, lessonId: string) => {
     if (!userId) return;

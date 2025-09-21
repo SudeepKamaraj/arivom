@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
-import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign } from 'lucide-react';
 import ReviewSection from './ReviewSection';
+import PaymentModal from './PaymentModal';
+import paymentService from '../services/paymentService';
 
 interface CourseDetailProps {
   course: any;
@@ -25,6 +27,12 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
   const [isCompleted, setIsCompleted] = useState(false);
   // Add this prop to force refresh review eligibility after assessment
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
+  
+  // Payment related state
+  const [paymentStatus, setPaymentStatus] = useState<any>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(true);
+  const [hasAccess, setHasAccess] = useState(false);
 
   // Calculate progress and completion status
   useEffect(() => {
@@ -36,34 +44,68 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
     // Get progress from context
     const currentProgress = getCourseProgress(courseId, userId);
     setProgress(currentProgress);
+    
+    // Course should only be considered "completed" if all videos are watched (100% progress)
+    // AND the user has passed the assessment
+    const isAllVideosWatched = currentProgress === 100;
 
-    // Check if course is completed from MongoDB
-    const checkCourseStatus = async () => {
+    // Check payment status and course access
+    const checkCourseAccess = async () => {
       try {
-        const token = localStorage.getItem('authToken');
-        if (token) {
-          const response = await fetch(`http://localhost:5000/api/courses/${courseId}/status`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
+        setPaymentLoading(true);
+        
+        // First check payment status
+        const status = await paymentService.getPaymentStatus(courseId);
+        setPaymentStatus(status);
+        
+        // Determine if user has access
+        const hasAccess = status.isFree || status.hasPaid;
+        setHasAccess(hasAccess);
+
+        // Only check completion status if user has access
+        if (hasAccess) {
+          const token = localStorage.getItem('authToken');
+          if (token) {
+            const response = await fetch(`http://localhost:5001/api/courses/${courseId}/status`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (response.ok) {
+              const courseStatus = await response.json();
+              // FIXED: A course is only truly completed if the backend confirms completion
+              // Backend completion only happens when assessment is passed
+              // We also verify all videos are watched (100% progress)
+              const backendCompleted = courseStatus.completed;
+              
+              // Both conditions must be met: backend says completed AND all videos are watched
+              const isFullyCompleted = backendCompleted && isAllVideosWatched;
+              setIsCompleted(isFullyCompleted);
+              
+              console.log('Course status:', { 
+                backendCompleted,
+                isAllVideosWatched,
+                finalCompletionStatus: isFullyCompleted
+              });
             }
-          });
-          
-          if (response.ok) {
-            const status = await response.json();
-            setIsCompleted(status.completed);
-            console.log('Course status from MongoDB:', status);
           }
         }
       } catch (error) {
-        console.error('Error checking course status:', error);
-        // Fallback to localStorage
-        const completedCourses = (user as any).completedCourses || [];
-        const isCourseCompleted = completedCourses.includes(courseId);
-        setIsCompleted(isCourseCompleted);
+        console.error('Error checking course access:', error);
+        // Fallback - assume it's a free course for backward compatibility
+        setHasAccess(true);
+        setPaymentStatus({ isFree: true, canAccess: true });
+        
+        // Don't automatically mark as completed for fallback
+        // Course completion requires both video progress AND assessment completion
+        setIsCompleted(false);
+      } finally {
+        setPaymentLoading(false);
       }
     };
 
-    checkCourseStatus();
+    checkCourseAccess();
 
     console.log('Course Detail Debug:', {
       courseId,
@@ -87,14 +129,34 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
   // Check if course has assessments
   const hasAssessments = course.assessments && course.assessments.length > 0;
   const totalLessons = lessons.length;
-  const completedLessons = Object.keys(lessonProgress).length;
-
-  // Always show assessment button if all videos are completed (with or without assessments)
-  // Changed to remove the !isCompleted condition so button always appears when videos are complete
-  const shouldShowAssessment = progress >= 100;
+  
+  // Get a list of valid lesson IDs to compare against
+  const validLessonIds = lessons.map((l: any) => l._id || l.id);
+  
+  // Only count completed lessons that actually exist in the course
+  const completedLessons = Object.keys(lessonProgress)
+    .filter(id => validLessonIds.includes(id))
+    .length;
+    
+  // Determine if all videos are completed based on exact lesson count
+  const allVideosCompleted = completedLessons >= totalLessons;
+  
+  // Use both progress calculation and lesson count to determine if assessment should be shown
+  // This makes the check more robust
+  const shouldShowAssessment = progress >= 100 || allVideosCompleted;
 
   // Check if user has attempted but not passed the assessment
   const [hasAttemptedAssessment, setHasAttemptedAssessment] = useState(false);
+
+  // Payment success handler
+  const handlePaymentSuccess = () => {
+    // Refresh payment status after successful payment
+    const courseId = (course as any)._id || course.id;
+    paymentService.getPaymentStatus(courseId).then(status => {
+      setPaymentStatus(status);
+      setHasAccess(status.canAccess);
+    });
+  };
 
   useEffect(() => {
     const checkAssessmentAttempts = async () => {
@@ -104,7 +166,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         const token = localStorage.getItem('authToken');
         if (token) {
           const courseId = (course as any)._id || course.id;
-          const response = await fetch(`http://localhost:5000/api/assessments/results/course/${courseId}`, {
+          const response = await fetch(`http://localhost:5001/api/assessments/results/course/${courseId}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
@@ -113,7 +175,13 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
           if (response.ok) {
             const results = await response.json();
             const userId = (user as any)._id || (user as any).id;
-            const userResults = results.filter((r: any) => r.userId && r.userId._id === userId);
+            const userResults = results.filter((r: any) => {
+              if (!r.userId) return false;
+              // Handle both string and object ID comparison
+              const resultUserId = typeof r.userId === 'object' ? r.userId._id : r.userId;
+              return resultUserId === userId;
+            });
+            console.log('Assessment results for current user:', userResults);
             setHasAttemptedAssessment(userResults.length > 0);
           }
         }
@@ -125,7 +193,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
     checkAssessmentAttempts();
   }, [course, user]);
 
-  // Debug information
+  // Comprehensive debug information
   console.log('CourseDetail Debug:', {
     courseId: (course as any)._id || course.id,
     progress,
@@ -133,9 +201,20 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
     hasAssessments,
     totalLessons,
     completedLessons,
+    allVideosCompleted: completedLessons >= totalLessons,
     shouldShowAssessment,
     hasAttemptedAssessment,
-    lessonProgress
+    hasAccess,
+    assessmentButtonVisible: hasAccess && (completedLessons >= totalLessons || progress >= 100),
+    validLessonIds: lessons.map((l: any) => l._id || l.id),
+    lessons: lessons.map((l: any) => ({ 
+      id: l._id || l.id, 
+      title: l.title, 
+      completed: !!lessonProgress[l._id || l.id],
+      inProgressMap: !!lessonProgress[l._id || l.id]
+    })),
+    lessonProgress,
+    lessonProgressKeys: Object.keys(lessonProgress)
   });
 
   // This effect will run when the component re-renders
@@ -176,12 +255,29 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 }`}>
                   {course.level}
                 </span>
-                {isCompleted && (
-                  <div className="flex items-center space-x-2 text-caribbean-green">
-                    <CheckCircle className="w-5 h-5" />
-                    <span className="font-medium">Completed</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-4">
+                  {course.price > 0 && (
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-dark-gunmetal">
+                        {paymentService.formatCurrency(course.price)}
+                      </div>
+                      {paymentStatus?.hasPaid && (
+                        <div className="text-sm text-caribbean-green font-medium">Purchased</div>
+                      )}
+                    </div>
+                  )}
+                  {course.price === 0 && (
+                    <div className="px-3 py-1 bg-caribbean-green/20 text-caribbean-green rounded-full text-sm font-semibold">
+                      Free
+                    </div>
+                  )}
+                  {isCompleted && (
+                    <div className="flex items-center space-x-2 text-caribbean-green">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-medium">Completed</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <h1 className="text-3xl font-bold text-dark-gunmetal mb-4">
@@ -256,6 +352,45 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Access Control / Payment */}
+          {!paymentLoading && !hasAccess && course.price > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="text-center">
+                <div className="mb-4">
+                  <div className="text-3xl font-bold text-dark-gunmetal mb-2">
+                    {paymentService.formatCurrency(course.price)}
+                  </div>
+                  <p className="text-dark-gunmetal/70">One-time payment</p>
+                </div>
+                
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="w-full bg-cyber-grape hover:bg-cyber-grape-dark text-white py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 mb-4"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  <span>Purchase Course</span>
+                </button>
+                
+                <div className="text-xs text-dark-gunmetal/60">
+                  <p>✓ Lifetime access</p>
+                  <p>✓ Certificate of completion</p>
+                  <p>✓ All course materials</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Access Denied Message */}
+          {!paymentLoading && !hasAccess && course.price > 0 && (
+            <div className="bg-persimmon/10 border border-persimmon/20 rounded-xl p-6 text-center">
+              <Lock className="w-8 h-8 text-persimmon mx-auto mb-4" />
+              <h3 className="font-semibold text-persimmon mb-2">Course Locked</h3>
+              <p className="text-persimmon/80 text-sm">
+                Purchase this course to access all lessons and materials.
+              </p>
+            </div>
+          )}
+
           {/* Curriculum */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-dark-gunmetal mb-4">
@@ -268,7 +403,11 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 const prevLesson = index > 0 ? course.lessons[index - 1] : null;
                 const prevLessonId = prevLesson ? ((prevLesson as any)._id || prevLesson.id) : null;
                 const isLessonCompleted = lessonProgress[lessonId];
-                const canAccess = index === 0 || (prevLessonId ? lessonProgress[prevLessonId] : false);
+                const isFirstLesson = index === 0;
+                const prevLessonCompleted = prevLessonId ? lessonProgress[prevLessonId] : false;
+                
+                // Access logic: user must have course access (paid or free) and meet lesson prerequisites
+                const canAccess = hasAccess && (isFirstLesson || prevLessonCompleted);
                 
                 return (
                   <div
@@ -285,7 +424,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      {!canAccess ? (
+                      {!hasAccess || (!isFirstLesson && !prevLessonCompleted) ? (
                         <Lock className="w-5 h-5 text-gray-400" />
                       ) : isLessonCompleted ? (
                         <CheckCircle className="w-5 h-5 text-caribbean-green" />
@@ -308,8 +447,8 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               })}
             </div>
 
-            {/* Assessment Button */}
-            {shouldShowAssessment && (
+            {/* Assessment Button - Show if videos are completed OR progress is 100% */}
+            {hasAccess && (completedLessons >= totalLessons || progress >= 100) && (
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="bg-cyber-grape/10 border border-cyber-grape/20 rounded-lg p-4 mb-4">
                   <div className="flex items-center space-x-2 text-cyber-grape mb-2">
@@ -318,21 +457,27 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                   </div>
                   <p className="text-sm text-cyber-grape/80">
                     {isCompleted 
-                      ? `You've already completed this course. You can take the assessment again anytime.`
+                      ? `You've successfully completed this course with all videos watched and assessment passed. You can take the assessment again anytime.`
                       : hasAssessments 
-                        ? `You've completed all ${totalLessons} lessons. Click below to take the final assessment to earn your certificate.`
-                        : `You've completed all ${totalLessons} lessons. Click below to complete the course and earn your certificate.`
+                        ? `You've watched all ${totalLessons} lessons. Click below to take the final assessment to complete the course and earn your certificate.`
+                        : `You've watched all ${totalLessons} lessons. Click below to complete the course and earn your certificate.`
                     }
                   </p>
                   {hasAttemptedAssessment && !isCompleted && (
                     <p className="text-sm text-persimmon mt-2">
-                      You need to pass the assessment to complete this course and earn your certificate.
+                      You need to pass the assessment to complete this course and unlock the review option.
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => {
-                    // Always start assessment after completing course
+                    console.log('Starting assessment...', {
+                      courseId: (course as any)._id || course.id,
+                      progress,
+                      completedLessons,
+                      totalLessons
+                    });
+                    // Always start assessment after completing all videos
                     onAssessmentStart();
                     // Assessment completion will be handled via the callback
                   }}
@@ -351,7 +496,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               </div>
             )}
 
-            {isCompleted && !shouldShowAssessment && (
+            {hasAccess && isCompleted && !shouldShowAssessment && (
               <div className="mt-6 pt-4 border-t border-gray-200">
                 <div className="text-center text-caribbean-green">
                   <CheckCircle className="w-8 h-8 mx-auto mb-2" />
@@ -372,6 +517,14 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
           courseTitle={course.title}
         />
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        course={course}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 };

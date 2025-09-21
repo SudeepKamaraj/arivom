@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
-import { ArrowLeft, Play, Pause, Volume2, Maximize2, Check, Settings, RotateCcw, Sparkles } from 'lucide-react';
+import { ArrowLeft, Play, Pause, Volume2, Maximize2, Check, Settings, Sparkles } from 'lucide-react';
 
 interface VideoPlayerProps {
   lesson: any;
@@ -17,6 +17,52 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onBack
 }) => {
   const { user } = useAuth();
+  // Function to mark video as completed on backend
+  const markVideoCompleteOnBackend = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token || !course?._id || !lesson?.id) return;
+
+      const response = await fetch(`http://localhost:5001/api/courses/${course._id}/progress/video`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          videoId: lesson.id,
+          watchedTime: duration,
+          isCompleted: true
+        })
+      });
+
+      if (response.ok) {
+        console.log('Video completion synced with backend');
+        
+        // Check for achievements after video completion
+        try {
+          await fetch('http://localhost:5001/api/achievements/check', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              actionType: 'WATCH_VIDEO',
+              courseId: course._id
+            })
+          });
+        } catch (achievementError) {
+          console.error('Error checking achievements:', achievementError);
+        }
+      } else {
+        console.error('Failed to sync video completion with backend');
+      }
+    } catch (error) {
+      console.error('Error syncing video completion:', error);
+    }
+  };
+
   const { updateLessonProgress, setLastLessonId } = useCourses();
   const videoRef = useRef<HTMLVideoElement>(null);
   
@@ -36,7 +82,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Get correct IDs
   const courseId = course._id || course.id;
   const lessonId = lesson._id || lesson.id;
-  const userId = user?.id || user?._id;
+  const userId = user?.id;
 
   // Build URL preference: DB lesson URL -> custom override -> course preview
   const customUrl = (typeof window !== 'undefined') ? localStorage.getItem(`custom_video_url_${lessonId}`) : null;
@@ -65,14 +111,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Persist last lesson position for resume
       setLastLessonId(courseId, userId || '', lessonId);
       
-      // Check if video is completed (watched 100%)
-      if (duration > 0 && newWatchedTime >= duration && !isCompleted) {
+      // Check if video is completed (watched 95% or more - more lenient)
+      // Some videos might have credits or blank endings, so 95% is a good threshold
+      if (duration > 0 && newWatchedTime >= (duration * 0.95) && !isCompleted) {
+        console.log(`Video ${lessonId} marked as completed at ${newWatchedTime}/${duration} seconds`);
         setIsCompleted(true);
         setShowCompletion(true);
         updateLessonProgress(courseId, lessonId, userId || '');
         
+        // Sync completion with backend
+        markVideoCompleteOnBackend();
+        
         // Hide completion message after 3 seconds
         setTimeout(() => setShowCompletion(false), 3000);
+        
+        // Force onComplete callback after a short delay to ensure state is updated
+        setTimeout(() => {
+          onComplete();
+        }, 1500);
       }
     };
 
@@ -83,10 +139,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleEnded = () => {
       setIsPlaying(false);
       if (!isCompleted) {
+        console.log(`Video ${lessonId} ended - marking as completed`);
         setIsCompleted(true);
         setShowCompletion(true);
         updateLessonProgress(courseId, lessonId, userId || '');
+        
+        // Sync completion with backend
+        markVideoCompleteOnBackend();
+        
         setTimeout(() => setShowCompletion(false), 3000);
+        
+        // Always trigger onComplete when video ends
+        // This ensures we navigate back to course detail
+        setTimeout(() => {
+          onComplete();
+        }, 1500);
       }
     };
 

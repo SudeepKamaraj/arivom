@@ -16,6 +16,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 import AdminCourses from './components/AdminCourses';
 import Profile from './components/Profile.tsx';
 import Settings from './components/Settings.tsx';
+import AchievementsPage from './components/AchievementsPage';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -31,7 +32,6 @@ function CourseWrapper({ children }: { children: (course: any) => React.ReactNod
       // First try to find in context courses
       let foundCourse = courses.find(c => 
         c.id === courseSlug || 
-        c._id === courseSlug ||
         c.title.toLowerCase().replace(/[^a-z0-9]/g, '-') === courseSlug
       );
 
@@ -45,13 +45,13 @@ function CourseWrapper({ children }: { children: (course: any) => React.ReactNod
           }
 
           // Try by slug first
-          let response = await fetch(`http://localhost:5000/api/courses/slug/${courseSlug}`, {
+          let response = await fetch(`http://localhost:5001/api/courses/slug/${courseSlug}`, {
             headers
           });
 
           if (!response.ok) {
             // Fallback: try by ID
-            response = await fetch(`http://localhost:5000/api/courses/${courseSlug}`, {
+            response = await fetch(`http://localhost:5001/api/courses/${courseSlug}`, {
               headers
             });
           }
@@ -150,6 +150,7 @@ function AppContent() {
           <Route path="/admin-courses" element={<AdminCourses />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/courses/:courseSlug" element={
             <CourseWrapper>
               {(course) => (
@@ -161,7 +162,11 @@ function AppContent() {
                   }}
                   onAssessmentStart={() => {
                     const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                    navigate(`/courses/${courseSlug}/assessment`);
+                    console.log(`Navigating to assessment page for course: ${courseSlug}`);
+                    // Use a small timeout to ensure all state updates have completed
+                    setTimeout(() => {
+                      navigate(`/courses/${courseSlug}/assessment`);
+                    }, 100);
                   }}
                   onAssessmentComplete={() => {
                     // This will handle the async update when returning from assessment

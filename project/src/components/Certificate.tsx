@@ -52,7 +52,7 @@ const Certificate: React.FC<CertificateProps> = ({ course, onBack }) => {
   const saveCertificateToDatabase = async (data: CertificateData) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/certificates', {
+      const response = await fetch('http://localhost:5001/api/certificates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ Arivom - Online Learning Platform
   const updateCertificateUrl = async (certificateId: string, imageUrl: string) => {
     try {
       const token = localStorage.getItem('authToken');
-      await fetch(`http://localhost:5000/api/certificates/${certificateId}`, {
+      await fetch(`http://localhost:5001/api/certificates/${certificateId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

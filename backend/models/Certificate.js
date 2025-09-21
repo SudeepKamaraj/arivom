@@ -74,7 +74,6 @@ const certificateSchema = new mongoose.Schema({
 
 // Index for efficient querying
 certificateSchema.index({ userId: 1, issuedAt: -1 });
-certificateSchema.index({ certificateId: 1 });
 certificateSchema.index({ courseId: 1 });
 certificateSchema.index({ status: 1 });
 

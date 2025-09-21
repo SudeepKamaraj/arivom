@@ -31,7 +31,7 @@ const CourseCompletion: React.FC<CourseCompletionProps> = ({ course, onBack }) =
       }
 
       // Call backend to mark course as completed
-      const response = await fetch(`http://localhost:5000/api/courses/${courseId}/complete`, {
+      const response = await fetch(`http://localhost:5001/api/courses/${courseId}/complete`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

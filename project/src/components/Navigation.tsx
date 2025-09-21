@@ -88,6 +88,12 @@ const Navigation: React.FC = () => {
               >
                 Recommendations
               </Link>
+              <Link
+                to="/achievements"
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/achievements' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+              >
+                Achievements
+              </Link>
               {(user?.role === 'admin' || user?.role === 'instructor') && (
                 <Link
                   to="/admin-courses"
@@ -262,6 +268,13 @@ const Navigation: React.FC = () => {
               className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
             >
               Recommendations
+            </Link>
+            <Link
+              to="/achievements"
+              onClick={() => setIsMenuOpen(false)}
+              className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+            >
+              Achievements
             </Link>
             
             {user && (

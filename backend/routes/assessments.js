@@ -50,10 +50,29 @@ router.post('/progress/:courseId', auth, async (req, res) => {
 // Get assessment progress
 router.get('/progress/:courseId', auth, async (req, res) => {
   try {
-    const courseId = req.params.courseId;
+    const courseIdParam = req.params.courseId;
     const userId = req.user._id;
 
-    const progress = await AssessmentProgress.findOne({ userId, courseId });
+    let actualCourseId = courseIdParam;
+
+    // Check if courseId is a valid ObjectId, if not try to find by slug
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(courseIdParam) || courseIdParam.length !== 24) {
+      const Course = require('../models/Course');
+      const courses = await Course.find();
+      const course = courses.find(c => {
+        const courseSlug = c.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        return courseSlug === courseIdParam;
+      });
+      
+      if (course) {
+        actualCourseId = course._id;
+      } else {
+        return res.status(404).json({ message: 'Course not found' });
+      }
+    }
+
+    const progress = await AssessmentProgress.findOne({ userId, courseId: actualCourseId });
     
     if (progress) {
       res.json({ 
@@ -76,10 +95,29 @@ router.get('/progress/:courseId', auth, async (req, res) => {
 // Delete assessment progress
 router.delete('/progress/:courseId', auth, async (req, res) => {
   try {
-    const courseId = req.params.courseId;
+    const courseIdParam = req.params.courseId;
     const userId = req.user._id;
 
-    await AssessmentProgress.findOneAndDelete({ userId, courseId });
+    let actualCourseId = courseIdParam;
+
+    // Check if courseId is a valid ObjectId, if not try to find by slug
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(courseIdParam) || courseIdParam.length !== 24) {
+      const Course = require('../models/Course');
+      const courses = await Course.find();
+      const course = courses.find(c => {
+        const courseSlug = c.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        return courseSlug === courseIdParam;
+      });
+      
+      if (course) {
+        actualCourseId = course._id;
+      } else {
+        return res.status(404).json({ message: 'Course not found' });
+      }
+    }
+
+    await AssessmentProgress.findOneAndDelete({ userId, courseId: actualCourseId });
     
     res.json({ message: 'Progress cleared successfully' });
   } catch (error) {
@@ -137,7 +175,28 @@ router.get('/results/user/:userId', auth, async (req, res) => {
 // Get assessment results for a course
 router.get('/results/course/:courseId', auth, async (req, res) => {
   try {
-    const assessments = await Assessment.find({ courseId: req.params.courseId })
+    const courseIdParam = req.params.courseId;
+
+    let actualCourseId = courseIdParam;
+
+    // Check if courseId is a valid ObjectId, if not try to find by slug
+    const mongoose = require('mongoose');
+    if (!mongoose.Types.ObjectId.isValid(courseIdParam) || courseIdParam.length !== 24) {
+      const Course = require('../models/Course');
+      const courses = await Course.find();
+      const course = courses.find(c => {
+        const courseSlug = c.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        return courseSlug === courseIdParam;
+      });
+      
+      if (course) {
+        actualCourseId = course._id;
+      } else {
+        return res.status(404).json({ message: 'Course not found' });
+      }
+    }
+
+    const assessments = await Assessment.find({ courseId: actualCourseId })
       .populate('userId', 'firstName lastName email')
       .sort({ completedAt: -1 });
     

@@ -48,6 +48,41 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // Gamification related fields
+  xp: {
+    type: Number,
+    default: 0
+  },
+  level: {
+    type: Number,
+    default: 1
+  },
+  streak: {
+    current: {
+      type: Number,
+      default: 0
+    },
+    longest: {
+      type: Number,
+      default: 0
+    },
+    lastActivityDate: {
+      type: Date,
+      default: null
+    }
+  },
+  dailyXpCap: {
+    type: Number,
+    default: 500
+  },
+  dailyXpEarned: {
+    type: Number,
+    default: 0
+  },
+  lastXpReset: {
+    type: Date,
+    default: Date.now
+  },
   profilePicture: {
     type: String,
     default: ''

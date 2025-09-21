@@ -1,6 +1,6 @@
 // API service for communicating with the backend
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5001/api';
 
 export interface LoginData {
   email: string;
@@ -258,6 +258,23 @@ export const uploadsApi = {
     form.append('file', file);
     return fetch(`${API_BASE_URL}/uploads/video`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: form }).then(r => r.json());
   }
+};
+
+// Helper function for authenticated API requests
+export const fetchWithAuth = async (endpoint: string, options: RequestInit = {}): Promise<Response> => {
+  const token = localStorage.getItem('authToken');
+  
+  const headers = new Headers(options.headers || {});
+  headers.set('Content-Type', 'application/json');
+  
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  
+  return fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers
+  });
 };
 
 export const reviewsApi = {

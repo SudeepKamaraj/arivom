@@ -59,7 +59,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
         params.append('rating', rating.toString());
       }
 
-      const response = await fetch(`http://localhost:5000/api/reviews/course/${courseId}?${params}`);
+      const response = await fetch(`http://localhost:5001/api/reviews/course/${courseId}?${params}`);
       const data = await response.json();
 
       if (response.ok) {
@@ -85,7 +85,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
 
   const fetchRatingData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/reviews/course/${courseId}/rating`);
+      const response = await fetch(`http://localhost:5001/api/reviews/course/${courseId}/rating`);
       const data = await response.json();
       setRatingData(data);
     } catch (error) {
@@ -116,7 +116,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
       console.log('Fetching course status for courseId:', courseId);
 
       // Check if user has completed the course
-      const statusResponse = await fetch(`http://localhost:5000/api/courses/${courseId}/status`, {
+      const statusResponse = await fetch(`http://localhost:5001/api/courses/${courseId}/status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -128,33 +128,28 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
         const statusData = await statusResponse.json();
         console.log('Course completion status data:', statusData);
         
-        // Check multiple conditions for completion
+        // IMPORTANT: Only allow reviews if backend says course is fully completed
+        // This means both watching all videos AND passing the assessment
+        // We no longer rely on just progress >= 100 since that only means videos are watched
         const isCompleted = statusData.completed || 
-                           statusData.progress >= 100 ||
                            (statusData.debug && statusData.debug.enrollment && statusData.debug.enrollment.certificateEarned);
         
         console.log('Computed completion status:', isCompleted);
         
         if (!isCompleted) {
-          console.log('Course not completed according to backend, cannot review');
+          console.log('Course not completed according to backend, cannot review - must pass assessment');
           
-          // Additional check: look for local completion indicators
-          const localProgress = localStorage.getItem(`progress_${(user as any)._id || (user as any).id}_${courseId}`);
-          console.log('Local progress data:', localProgress);
-          
-          // If we have local completion indicators but backend doesn't recognize it,
-          // try to trigger course completion
-          if (localProgress) {
-            console.log('Found local progress, attempting to trigger course completion...');
-            await triggerCourseCompletion();
-            // Recheck after triggering completion
-            return checkCanReview();
+          // Check if videos are complete but assessment isn't passed
+          if (statusData.progress >= 100) {
+            console.log('Videos are 100% complete but assessment needs to be passed before reviewing');
+          } else {
+            console.log('Videos not 100% complete, cannot review');
           }
           
           setCanReview(false);
           return;
         } else {
-          console.log('Course is completed according to backend');
+          console.log('Course is fully completed according to backend (videos + assessment)');
         }
       } else {
         const errorText = await statusResponse.text();
@@ -202,7 +197,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
 
       console.log('Triggering course completion for courseId:', courseId);
       
-      const response = await fetch(`http://localhost:5000/api/courses/${courseId}/complete`, {
+      const response = await fetch(`http://localhost:5001/api/courses/${courseId}/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -238,7 +233,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
       
       console.log('Submitting review:', { courseId, ...reviewData });
       
-      const response = await fetch('http://localhost:5000/api/reviews', {
+      const response = await fetch('http://localhost:5001/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -258,6 +253,24 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
         fetchReviews();
         fetchRatingData();
         checkCanReview();
+        
+        // Check for achievements for submitting a review
+        try {
+          await fetch('http://localhost:5001/api/achievements/check', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              actionType: 'REVIEW_COURSE',
+              courseId
+            })
+          });
+        } catch (achievementError) {
+          console.error('Error checking achievements:', achievementError);
+        }
+        
         alert('Thank you for your review! It has been submitted successfully.');
       } else {
         console.error('Review submission failed:', responseData);
@@ -289,7 +302,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
   const handleMarkHelpful = async (reviewId: string) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:5000/api/reviews/${reviewId}/helpful`, {
+      const response = await fetch(`http://localhost:5001/api/reviews/${reviewId}/helpful`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -307,7 +320,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
   const handleReportReview = async (reviewId: string, reason: string) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:5000/api/reviews/${reviewId}/report`, {
+      const response = await fetch(`http://localhost:5001/api/reviews/${reviewId}/report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

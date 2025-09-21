@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses, Course } from '../contexts/CourseContext';
-import { BookOpen, Clock, Award, TrendingUp, Search, Filter, Play, CheckCircle, Star, ArrowRight } from 'lucide-react';
+import { BookOpen, Clock, Award, TrendingUp, Search, Filter, Play, CheckCircle, Star, ArrowRight, CreditCard, DollarSign } from 'lucide-react';
+import paymentService from '../services/paymentService';
 
 interface DashboardProps {
   onCourseSelect?: (course: Course) => void;
@@ -10,10 +11,11 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate }) => {
   const { user } = useAuth();
-  const { courses, getRecommendedCourses, getCourseProgress, isCourseCompleted } = useCourses();
+  const { courses, getCourseProgress, isCourseCompleted } = useCourses();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
+  const [paymentStatuses, setPaymentStatuses] = useState<{ [courseId: string]: any }>({});
 
   // Filter courses based on search term
   useEffect(() => {
@@ -29,9 +31,34 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
     }
   }, [searchTerm, courses]);
 
-  // Get courses with actual progress data
+  // Load payment statuses for all courses
+  useEffect(() => {
+    const loadPaymentStatuses = async () => {
+      if (!user || courses.length === 0) return;
+
+      const statuses: { [courseId: string]: any } = {};
+      
+      for (const course of courses) {
+        const courseId = (course as any)._id || course.id;
+        try {
+          const status = await paymentService.getPaymentStatus(courseId);
+          statuses[courseId] = status;
+        } catch (error) {
+          console.error(`Error loading payment status for course ${courseId}:`, error);
+          // Default to free course status on error
+          statuses[courseId] = { isFree: true, hasPaid: false, canAccess: true };
+        }
+      }
+      
+      setPaymentStatuses(statuses);
+    };
+
+    loadPaymentStatuses();
+  }, [user, courses]);
+
+  // Get courses with actual progress data and payment status
   const getCoursesWithProgress = () => {
-    if (!user) return { inProgress: [], completed: [], recommended: [] };
+    if (!user) return { inProgress: [], completed: [], recommended: [], purchased: [], free: [] };
 
     const userId = (user as any).id || (user as any)._id;
     
@@ -39,12 +66,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
       const courseId = (course as any)._id || course.id;
       const progress = getCourseProgress(courseId, userId);
       const completed = isCourseCompleted(courseId, userId);
+      const paymentStatus = paymentStatuses[courseId];
       
       return {
         ...course,
         progress,
         completed,
-        courseId
+        courseId,
+        paymentStatus
       };
     });
 
@@ -60,7 +89,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
       course.progress === 0 && !course.completed
     ).slice(0, 6);
 
-    return { inProgress, completed, recommended };
+    // Separate paid courses from free courses
+    const purchased = coursesWithProgress.filter(course => 
+      course.paymentStatus?.hasPaid && !course.paymentStatus?.isFree
+    );
+
+    const free = coursesWithProgress.filter(course => 
+      course.paymentStatus?.isFree || (course.price === 0)
+    );
+
+    return { inProgress, completed, recommended, purchased, free };
   };
 
   // Check MongoDB completion status for all courses
@@ -76,7 +114,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
         for (const course of courses) {
           const courseId = (course as any)._id || course.id;
           try {
-            const response = await fetch(`http://localhost:5000/api/courses/${courseId}/status`, {
+            const response = await fetch(`http://localhost:5001/api/courses/${courseId}/status`, {
               headers: {
                 'Authorization': `Bearer ${token}`
               }
@@ -98,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
     checkMongoDBStatus();
   }, [courses, user]);
 
-  const { inProgress, completed, recommended } = getCoursesWithProgress();
+  const { inProgress, completed, recommended, purchased, free } = getCoursesWithProgress();
 
   if (!user) {
     return (
@@ -127,6 +165,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
     { id: 'overview', label: 'Overview', icon: BookOpen },
     { id: 'in-progress', label: 'In Progress', icon: Clock, count: inProgress.length },
     { id: 'completed', label: 'Completed', icon: CheckCircle, count: completed.length },
+    { id: 'purchased', label: 'Purchased', icon: CreditCard, count: purchased.length },
     { id: 'recommended', label: 'Recommended', icon: TrendingUp },
   ];
 
@@ -284,7 +323,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                     {inProgress.slice(0, 2).map((course: any) => (
                       <div key={course.courseId} className="bg-white dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleCourseClick(course)}>
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm font-medium text-cyber-grape">{course.level}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-cyber-grape">{course.level}</span>
+                            {course.paymentStatus?.hasPaid && !course.paymentStatus?.isFree && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                Purchased
+                              </span>
+                            )}
+                            {course.paymentStatus?.isFree && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                                Free
+                              </span>
+                            )}
+                          </div>
                           <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.duration}</span>
                         </div>
                         <h4 className="font-semibold text-dark-gunmetal dark:text-white mb-2">{course.title}</h4>
@@ -454,6 +505,92 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                     className="px-4 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg transition-colors"
                   >
                     Continue Learning
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Purchased Tab */}
+          {activeTab === 'purchased' && (
+            <div>
+              {purchased.length > 0 ? (
+                <>
+                  <h3 className="text-xl font-semibold text-dark-gunmetal dark:text-white mb-4">
+                    Your Purchased Courses ({purchased.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {purchased.map((course: any) => (
+                      <div key={course.courseId} className="bg-white dark:bg-gray-900 rounded-lg p-6 border border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleCourseClick(course)}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-cyber-grape">{course.level}</span>
+                            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium flex items-center">
+                              <CreditCard className="w-3 h-3 mr-1" />
+                              Purchased
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold text-dark-gunmetal dark:text-white">
+                              {paymentService.formatCurrency(course.price)}
+                            </div>
+                            <div className="text-xs text-green-600">Paid</div>
+                          </div>
+                        </div>
+                        <h4 className="font-semibold text-dark-gunmetal dark:text-white mb-2">{course.title}</h4>
+                        <p className="text-sm text-dark-gunmetal/70 dark:text-gray-300 mb-4">{course.description}</p>
+                        
+                        {/* Progress Bar for purchased courses */}
+                        <div className="mb-4">
+                          <div className="flex justify-between text-sm text-dark-gunmetal/70 dark:text-gray-300 mb-1">
+                            <span>Progress</span>
+                            <span>{course.progress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2">
+                            <div
+                              className="bg-caribbean-green h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${course.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Star className="w-4 h-4 text-persimmon fill-current" />
+                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                          </div>
+                          <button className="flex items-center space-x-2 px-4 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg transition-colors">
+                            {course.progress > 0 ? (
+                              <>
+                                <Play className="w-4 h-4" />
+                                <span>Continue</span>
+                              </>
+                            ) : (
+                              <>
+                                <Play className="w-4 h-4" />
+                                <span>Start</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <CreditCard className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark-gunmetal dark:text-white mb-2">No Purchased Courses</h3>
+                  <p className="text-dark-gunmetal/70 dark:text-gray-300 mb-4">
+                    You haven't purchased any courses yet. Browse our catalog to find courses that interest you.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('recommended')}
+                    className="px-6 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg transition-colors"
+                  >
+                    Browse Courses
                   </button>
                 </div>
               )}

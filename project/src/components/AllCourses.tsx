@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useCourses } from '../contexts/CourseContext';
-import { Search, Filter, Clock, Users, Star, BookOpen } from 'lucide-react';
+import { Search, Filter, Clock, Users, Star, BookOpen, DollarSign } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 
 interface AllCoursesProps {
@@ -80,10 +80,16 @@ const AllCourses: React.FC<AllCoursesProps> = ({ onCourseSelect }) => {
             {course.level}
           </span>
         </div>
-        {/* Removed price badge */}
-        {/* <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg">
-          <span className="text-sm font-semibold text-gray-900">${course.price}</span>
-        </div> */}
+        <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg">
+          {course.price > 0 ? (
+            <div className="flex items-center text-sm font-semibold text-gray-900">
+              <DollarSign className="w-3 h-3 mr-1" />
+              <span>₹{course.price}</span>
+            </div>
+          ) : (
+            <span className="text-sm font-semibold text-green-600">Free</span>
+          )}
+        </div>
       </div>
       
       <div className="p-6">

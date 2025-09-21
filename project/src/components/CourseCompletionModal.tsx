@@ -42,7 +42,7 @@ const CourseCompletionModal: React.FC<CourseCompletionModalProps> = ({
       console.log('Submitting review:', { courseId, ...reviewData });
       
       // Using the same port as the server
-      const response = await fetch('http://localhost:5000/api/reviews', {
+      const response = await fetch('http://localhost:5001/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

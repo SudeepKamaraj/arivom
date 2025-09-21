@@ -17,6 +17,7 @@ const AdminCourses: React.FC = () => {
     description: '',
     category: '',
     level: 'Beginner',
+    price: 0,
     thumbnail: '',
     tags: '',
     isPublished: false,
@@ -64,8 +65,9 @@ const AdminCourses: React.FC = () => {
   }
 
   function handleEditFormChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
-    const { name, value } = e.target;
-    setEditForm((prev: any) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const val = type === 'number' ? Number(value) : value;
+    setEditForm((prev: any) => ({ ...prev, [name]: val }));
   }
 
   async function handleEditFormSubmit(e: React.FormEvent) {
@@ -179,6 +181,7 @@ const AdminCourses: React.FC = () => {
         description: form.description,
         category: form.category,
         level: form.level.toLowerCase(),
+        price: form.price || 0,
         duration: Math.max(1, form.videos.reduce((s: number, v: any) => s + (Number(v.duration) || 0), 0)),
         thumbnail: form.thumbnail,
         tags: form.tags ? form.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
@@ -214,6 +217,7 @@ const AdminCourses: React.FC = () => {
         description: '', 
         category: '', 
         level: 'Beginner', 
+        price: 0,
         thumbnail: '', 
         tags: '', 
         isPublished: false, 
@@ -252,15 +256,48 @@ const AdminCourses: React.FC = () => {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Create Course</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input className="border rounded px-3 py-2" placeholder="Title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} />
-          <input className="border rounded px-3 py-2" placeholder="Category" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} />
-          <select className="border rounded px-3 py-2" value={form.level} onChange={e=>setForm({...form,level:e.target.value})}>
-            {levels.map(l=> <option key={l}>{l}</option>)}
-          </select>
-          <input className="border rounded px-3 py-2" placeholder="Thumbnail URL" value={form.thumbnail} onChange={e=>setForm({...form,thumbnail:e.target.value})} />
-          <input className="border rounded px-3 py-2" placeholder="Instructor Name" value={form.instructorName} onChange={e=>setForm({...form,instructorName:e.target.value})} />
-          <input className="md:col-span-2 border rounded px-3 py-2" placeholder="Tags (comma separated)" value={form.tags} onChange={e=>setForm({...form,tags:e.target.value})} />
-          <textarea className="md:col-span-2 border rounded px-3 py-2" placeholder="Description" value={form.description} onChange={e=>setForm({...form,description:e.target.value})} />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+            <input className="w-full border rounded px-3 py-2" placeholder="Enter course title" value={form.title} onChange={e=>setForm({...form,title:e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+            <input className="w-full border rounded px-3 py-2" placeholder="Enter category" value={form.category} onChange={e=>setForm({...form,category:e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Level</label>
+            <select className="w-full border rounded px-3 py-2" value={form.level} onChange={e=>setForm({...form,level:e.target.value})}>
+              {levels.map(l=> <option key={l}>{l}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
+            <input 
+              type="number" 
+              className="w-full border rounded px-3 py-2" 
+              placeholder="Enter price (0 for free)" 
+              value={form.price} 
+              min="0"
+              onChange={e=>setForm({...form,price:Number(e.target.value)})} 
+            />
+            <p className="text-xs text-gray-500 mt-1">Enter 0 to make the course free</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail URL</label>
+            <input className="w-full border rounded px-3 py-2" placeholder="Enter thumbnail URL" value={form.thumbnail} onChange={e=>setForm({...form,thumbnail:e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Instructor Name</label>
+            <input className="w-full border rounded px-3 py-2" placeholder="Enter instructor name" value={form.instructorName} onChange={e=>setForm({...form,instructorName:e.target.value})} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+            <input className="w-full border rounded px-3 py-2" placeholder="Enter tags (comma separated)" value={form.tags} onChange={e=>setForm({...form,tags:e.target.value})} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+            <textarea className="w-full border rounded px-3 py-2" rows={3} placeholder="Enter course description" value={form.description} onChange={e=>setForm({...form,description:e.target.value})} />
+          </div>
         </div>
 
         {/* Videos */}
@@ -453,6 +490,9 @@ const AdminCourses: React.FC = () => {
                   <FileText className="w-4 h-4" />
                   Assessments: {c.assessments?.length||0}
                 </span>
+                <span className="font-semibold text-green-600">
+                  {c.price === 0 ? 'Free' : `₹${c.price}`}
+                </span>
               </div>
               <div className="mt-2 flex items-center gap-2 text-sm">
                 {c.isPublished ? (<span className="text-green-600 flex items-center gap-1"><CheckCircle className="w-4 h-4"/>Published</span>):(<span className="text-gray-600 flex items-center gap-1"><XCircle className="w-4 h-4"/>Draft</span>)}
@@ -485,6 +525,17 @@ const AdminCourses: React.FC = () => {
                   <select name="level" value={editForm.level || ''} onChange={handleEditFormChange} className="w-full border rounded px-2 py-1">
                     {levels.map(l => <option key={l} value={l}>{l}</option>)}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium">Price (₹0 for free)</label>
+                  <input 
+                    type="number" 
+                    name="price" 
+                    value={editForm.price || 0} 
+                    onChange={handleEditFormChange} 
+                    className="w-full border rounded px-2 py-1" 
+                    min="0"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium">Thumbnail URL</label>

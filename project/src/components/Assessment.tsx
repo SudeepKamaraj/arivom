@@ -172,7 +172,7 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
       const courseId = course?._id || course?.id;
       if (!courseId) return;
 
-      const response = await fetch(`http://localhost:5000/api/assessments/progress/${courseId}`, {
+      const response = await fetch(`http://localhost:5001/api/assessments/progress/${courseId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -198,7 +198,7 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
       const courseId = course?._id || course?.id;
       if (!courseId) return;
 
-      await fetch(`http://localhost:5000/api/assessments/progress/${courseId}`, {
+      await fetch(`http://localhost:5001/api/assessments/progress/${courseId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -264,7 +264,7 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
           try {
             const token = localStorage.getItem('authToken');
             if (token) {
-              const completeResponse = await fetch(`http://localhost:5000/api/courses/${courseId}/complete`, {
+              const completeResponse = await fetch(`http://localhost:5001/api/courses/${courseId}/complete`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -281,6 +281,36 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
                 
                 // Generate certificate only after successful completion
                 await generateCertificate(result);
+                
+                // Check for achievements for passing assessment
+                try {
+                  await fetch('http://localhost:5001/api/achievements/check', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                      actionType: 'PASS_ASSESSMENT',
+                      courseId: courseId
+                    })
+                  });
+                  
+                  // Also check for course completion achievements 
+                  await fetch('http://localhost:5001/api/achievements/check', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                      actionType: 'COMPLETE_COURSE',
+                      courseId: courseId
+                    })
+                  });
+                } catch (achievementError) {
+                  console.error('Error checking achievements:', achievementError);
+                }
               } else {
                 console.error('Failed to mark course as completed:', await completeResponse.text());
               }
@@ -321,7 +351,7 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
       const courseId = course?._id || course?.id;
       if (!courseId) return;
 
-      await fetch('http://localhost:5000/api/assessments/result', {
+      await fetch('http://localhost:5001/api/assessments/result', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -349,7 +379,7 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
       const courseId = course?._id || course?.id;
       if (!courseId) return;
 
-      await fetch('http://localhost:5000/api/certificates', {
+      await fetch('http://localhost:5001/api/certificates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -384,7 +414,7 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
       const courseId = course?._id || course?.id;
       if (!courseId) return;
 
-      await fetch(`http://localhost:5000/api/assessments/progress/${courseId}`, {
+      await fetch(`http://localhost:5001/api/assessments/progress/${courseId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
