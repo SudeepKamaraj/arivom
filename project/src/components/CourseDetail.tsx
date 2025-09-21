@@ -4,6 +4,7 @@ import { useCourses } from '../contexts/CourseContext';
 import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import PaymentModal from './PaymentModal';
+import CodeEditor from './CodeEditor';
 import paymentService from '../services/paymentService';
 
 interface CourseDetailProps {
@@ -287,6 +288,35 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               <p className="text-dark-gunmetal/70 mb-6 leading-relaxed">
                 {course.description}
               </p>
+
+              {/* Code Editor Section - Always show for all courses */}
+              {true && (
+                <div className="mb-8">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <span className="text-white text-sm font-bold">{'</>'}</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-800">Interactive Code Editor</h3>
+                        <p className="text-sm text-gray-600">Practice programming concepts with our built-in code editor</p>
+                      </div>
+                    </div>
+                    
+                    <CodeEditor
+                      supportedLanguages={course.codeEditor?.supportedLanguages || ['javascript', 'python', 'java', 'cpp', 'c']}
+                      initialLanguage={course.codeEditor?.defaultLanguage || 'javascript'}
+                      initialCode={course.codeEditor?.defaultCode || '// Write your code here\nconsole.log("Hello, World!");'}
+                      readOnly={false}
+                      height="500px"
+                    />
+                    
+                    <div className="mt-4 text-xs text-gray-500">
+                      💡 Tip: You can write, edit, and execute code in multiple programming languages. Click 'Run Code' to see the output!
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-dark-gunmetal/70 mb-6">
                 <div className="flex items-center space-x-2">
