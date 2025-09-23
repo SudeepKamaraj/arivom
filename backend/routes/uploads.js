@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { auth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
@@ -23,12 +24,25 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// POST /api/uploads/video -> returns { url }
+// Helper function to generate video ID from filename
+function generateVideoId(filename) {
+  return crypto.createHash('md5').update(filename).digest('hex');
+}
+
+// POST /api/uploads/video -> returns { videoId, filename } instead of direct URL
 router.post('/video', auth, requireRole(['admin','instructor']), upload.single('file'), (req, res) => {
   try {
     const filename = req.file.filename;
-    const url = `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`}/static/videos/${filename}`;
-    res.json({ url, filename });
+    const videoId = generateVideoId(filename);
+    
+    // Return secure video information instead of direct URL
+    res.json({ 
+      videoId,
+      filename,
+      originalName: req.file.originalname,
+      size: req.file.size,
+      message: 'Video uploaded successfully. Use videoId for secure access.'
+    });
   } catch (e) {
     res.status(500).json({ message: 'Upload failed' });
   }

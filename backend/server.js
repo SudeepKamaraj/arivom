@@ -105,6 +105,7 @@ app.set('trust proxy', 1);
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/videos', require('./routes/videos'));
+app.use('/api/video-stream', require('./routes/video-stream'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/certificates', require('./routes/certificates'));

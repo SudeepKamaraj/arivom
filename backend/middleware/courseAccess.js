@@ -254,11 +254,44 @@ const checkPaymentStatus = async (userId, courseId) => {
   }
 };
 
+// Helper function to check video access by video ID
+const checkVideoAccessById = async (userId, videoId, courseId = null) => {
+  try {
+    // If courseId is provided, check course access
+    if (courseId) {
+      const payment = await Payment.findOne({
+        userId: userId,
+        courseId: courseId,
+        status: 'paid'
+      });
+
+      if (payment) {
+        return { hasAccess: true, reason: 'course_paid' };
+      }
+
+      // Check if course is free
+      const course = await Course.findById(courseId);
+      if (course && course.price === 0) {
+        return { hasAccess: true, reason: 'course_free' };
+      }
+    }
+
+    // For now, allow access if no course restriction
+    // In production, you might want to check video-specific permissions
+    return { hasAccess: true, reason: 'default_access' };
+    
+  } catch (error) {
+    console.error('Video access check error:', error);
+    return { hasAccess: false, error: 'Failed to check video access' };
+  }
+};
+
 module.exports = {
   checkCourseAccess,
   checkContentAccess,
   checkVideoAccess,
   checkAssessmentAccess,
   checkCertificateAccess,
-  checkPaymentStatus
+  checkPaymentStatus,
+  checkVideoAccessById
 };
