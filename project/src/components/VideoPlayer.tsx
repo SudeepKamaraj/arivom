@@ -82,7 +82,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Get correct IDs
   const courseId = course._id || course.id;
   const lessonId = lesson._id || lesson.id;
-  const userId = user?.id;
+  const userId = user?.id || user?._id;
+
+  // Debug user and lesson IDs
+  console.log('VideoPlayer Debug:', {
+    userId,
+    userObject: user,
+    lessonId,
+    courseId,
+    progressKey: `progress_${userId}_${courseId}`
+  });
 
   // Build URL preference: DB lesson URL -> custom override -> course preview
   const customUrl = (typeof window !== 'undefined') ? localStorage.getItem(`custom_video_url_${lessonId}`) : null;

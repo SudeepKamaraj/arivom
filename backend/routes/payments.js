@@ -410,6 +410,7 @@ router.post('/test-payment', auth, async (req, res) => {
       razorpayOrderId: `test_order_${Date.now()}`,
       razorpayPaymentId: `test_payment_${Date.now()}`,
       razorpaySignature: `test_signature_${Date.now()}`,
+      paidAt: new Date(), // Add paidAt timestamp
       paymentMethod: 'test',
       metadata: {
         courseName: course.title,
@@ -456,5 +457,121 @@ router.post('/test-payment', auth, async (req, res) => {
     });
   }
 });
+
+// Webhook endpoint for Razorpay payment updates
+router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    const webhookSignature = req.get('X-Razorpay-Signature');
+    const webhookBody = req.body;
+
+    // Verify webhook signature if secret is configured
+    if (webhookSecret && webhookSecret !== 'whsec_placeholder') {
+      const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(webhookBody, 'utf8')
+        .digest('hex');
+
+      if (expectedSignature !== webhookSignature) {
+        console.error('Invalid webhook signature');
+        return res.status(400).json({ error: 'Invalid signature' });
+      }
+    }
+
+    const event = JSON.parse(webhookBody);
+    console.log('Received webhook event:', event.event);
+
+    switch (event.event) {
+      case 'payment.captured':
+        await handlePaymentCaptured(event.payload.payment.entity);
+        break;
+      case 'payment.failed':
+        await handlePaymentFailed(event.payload.payment.entity);
+        break;
+      case 'order.paid':
+        await handleOrderPaid(event.payload.order.entity);
+        break;
+      default:
+        console.log('Unhandled webhook event:', event.event);
+    }
+
+    res.json({ status: 'success' });
+
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// Helper functions for webhook event handling
+async function handlePaymentCaptured(paymentData) {
+  try {
+    const payment = await Payment.findOne({
+      razorpayOrderId: paymentData.order_id
+    });
+
+    if (payment && payment.status !== 'paid') {
+      payment.razorpayPaymentId = paymentData.id;
+      payment.status = 'paid';
+      payment.paidAt = new Date(paymentData.created_at * 1000);
+      await payment.save();
+
+      // Enroll user in course if not already enrolled
+      const course = await Course.findById(payment.courseId);
+      if (course) {
+        const isEnrolled = course.enrolledStudents.some(
+          student => student.student.toString() === payment.userId.toString()
+        );
+
+        if (!isEnrolled) {
+          course.enrolledStudents.push({
+            student: payment.userId,
+            enrolledAt: new Date(),
+            progress: 0
+          });
+          await course.save();
+        }
+      }
+
+      console.log('Payment captured and user enrolled:', payment.razorpayPaymentId);
+    }
+  } catch (error) {
+    console.error('Error handling payment captured:', error);
+  }
+}
+
+async function handlePaymentFailed(paymentData) {
+  try {
+    const payment = await Payment.findOne({
+      razorpayOrderId: paymentData.order_id
+    });
+
+    if (payment) {
+      payment.status = 'failed';
+      payment.failureReason = paymentData.error_description || 'Payment failed';
+      await payment.save();
+      console.log('Payment failed:', payment.razorpayOrderId);
+    }
+  } catch (error) {
+    console.error('Error handling payment failed:', error);
+  }
+}
+
+async function handleOrderPaid(orderData) {
+  try {
+    const payment = await Payment.findOne({
+      razorpayOrderId: orderData.id
+    });
+
+    if (payment && payment.status !== 'paid') {
+      payment.status = 'paid';
+      payment.paidAt = new Date();
+      await payment.save();
+      console.log('Order paid:', payment.razorpayOrderId);
+    }
+  } catch (error) {
+    console.error('Error handling order paid:', error);
+  }
+}
 
 module.exports = router;

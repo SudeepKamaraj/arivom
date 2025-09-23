@@ -30,17 +30,26 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
   useEffect(() => {
     if (isOpen && course._id) {
+      console.log('PaymentModal: Modal opened for course:', course._id);
+      console.log('PaymentModal: Local storage auth token:', localStorage.getItem('authToken'));
       checkPaymentStatus();
     }
   }, [isOpen, course._id]);
 
   const checkPaymentStatus = async () => {
     try {
+      console.log('PaymentModal: Starting payment status check for course:', course._id);
+      console.log('PaymentModal: Auth token present:', !!localStorage.getItem('authToken'));
+      
       setLoading(true);
       setError(null);
+      
       const status = await paymentService.getPaymentStatus(course._id);
+      console.log('PaymentModal: Payment status received:', status);
+      
       setPaymentStatus(status);
     } catch (err) {
+      console.error('PaymentModal: Payment status check failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to check payment status');
     } finally {
       setLoading(false);

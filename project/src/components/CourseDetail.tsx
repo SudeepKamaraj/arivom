@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
 import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign } from 'lucide-react';
@@ -24,10 +25,13 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
 }) => {
   const { user } = useAuth();
   const { getCourseProgress, getLastLessonId } = useCourses();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [progress, setProgress] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
   // Add this prop to force refresh review eligibility after assessment
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
+  const [showMessage, setShowMessage] = useState<string | null>(null);
   
   // Payment related state
   const [paymentStatus, setPaymentStatus] = useState<any>(null);
@@ -38,6 +42,29 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
   // Calculate progress and completion status
   useEffect(() => {
     if (!course || !user) return;
+
+    // Check for query parameters from checkout redirect
+    const urlParams = new URLSearchParams(location.search);
+    const message = urlParams.get('message');
+    const paymentSuccess = urlParams.get('payment');
+    
+    if (message === 'already-enrolled') {
+      setShowMessage('already-enrolled');
+      // Clear the URL parameter
+      navigate(location.pathname, { replace: true });
+    } else if (message === 'free-course') {
+      setShowMessage('free-course');
+      navigate(location.pathname, { replace: true });
+    } else if (paymentSuccess === 'success') {
+      setShowMessage('payment-success');
+      navigate(location.pathname, { replace: true });
+    }
+
+    // Auto-hide message after 5 seconds
+    if (showMessage) {
+      const timer = setTimeout(() => setShowMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
 
     const courseId = (course as any)._id || course.id;
     const userId = (user as any).id || (user as any)._id;
@@ -129,8 +156,20 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
   const lessonProgressKey = `progress_${resolvedUserId}_${(course as any)._id || course.id}`;
   const lessonProgress = JSON.parse(localStorage.getItem(lessonProgressKey) || '{}');
 
-  const lastLessonId = getLastLessonId((course as any)._id || course.id, user?.id || '');
+  const lastLessonId = getLastLessonId((course as any)._id || course.id, resolvedUserId);
   const lessons = course.lessons || course.videos || [];
+  
+  // Debug lesson progress
+  console.log('CourseDetail Lesson Progress Debug:', {
+    userId: resolvedUserId,
+    userObject: user,
+    courseId: (course as any)._id || course.id,
+    lessonProgressKey,
+    lessonProgress,
+    allLocalStorageKeys: Object.keys(localStorage).filter(key => key.includes('progress_')),
+    lessons: lessons.map((l: any) => ({ id: l._id || l.id, title: l.title }))
+  });
+  
   const lastLesson = lastLessonId ? lessons.find((l: any) => (l as any)._id === lastLessonId || l.id === lastLessonId) : null;
 
   // Check if course has assessments
@@ -242,6 +281,47 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         <ArrowLeft className="w-5 h-5" />
         <span>Back to Dashboard</span>
       </button>
+
+      {/* Success Messages */}
+      {showMessage && (
+        <div className="mb-6">
+          {showMessage === 'payment-success' && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <CheckCircle className="w-6 h-6 text-green-600 mr-3" />
+                <div>
+                  <h3 className="text-lg font-semibold text-green-800">Payment Successful!</h3>
+                  <p className="text-green-700">You now have full access to this course. Happy learning!</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {showMessage === 'already-enrolled' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <CheckCircle className="w-6 h-6 text-blue-600 mr-3" />
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-800">Already Enrolled</h3>
+                  <p className="text-blue-700">You already have access to this course. Continue your learning!</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {showMessage === 'free-course' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <Award className="w-6 h-6 text-blue-600 mr-3" />
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-800">Free Course Access</h3>
+                  <p className="text-blue-700">This is a free course. Enjoy unlimited access!</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Course Content */}
@@ -403,7 +483,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 </div>
                 
                 <button
-                  onClick={() => setShowPaymentModal(true)}
+                  onClick={() => navigate(`/checkout/${course._id || course.id}`)}
                   className="w-full bg-cyber-grape hover:bg-cyber-grape-dark text-white py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 mb-4"
                 >
                   <CreditCard className="w-5 h-5" />
@@ -414,6 +494,44 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                   <p>✓ Lifetime access</p>
                   <p>✓ Certificate of completion</p>
                   <p>✓ All course materials</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Already Enrolled Message */}
+          {!paymentLoading && hasAccess && course.price > 0 && paymentStatus?.hasPaid && (
+            <div className="bg-green-50 rounded-xl shadow-sm border border-green-200 p-6">
+              <div className="text-center">
+                <div className="mb-4">
+                  <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-green-800 mb-2">Already Enrolled!</h3>
+                  <p className="text-green-700">You have full access to this course</p>
+                </div>
+                
+                <div className="text-sm text-green-600 space-y-1">
+                  <p>✓ Payment completed</p>
+                  <p>✓ Lifetime access activated</p>
+                  <p>✓ All features unlocked</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Free Course Message */}
+          {!paymentLoading && hasAccess && course.price === 0 && (
+            <div className="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-6">
+              <div className="text-center">
+                <div className="mb-4">
+                  <Award className="w-12 h-12 text-blue-600 mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-blue-800 mb-2">Free Course</h3>
+                  <p className="text-blue-700">Enjoy this course at no cost!</p>
+                </div>
+                
+                <div className="text-sm text-blue-600 space-y-1">
+                  <p>✓ Full access included</p>
+                  <p>✓ Certificate available</p>
+                  <p>✓ All materials included</p>
                 </div>
               </div>
             </div>

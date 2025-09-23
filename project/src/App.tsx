@@ -18,6 +18,8 @@ import Profile from './components/Profile.tsx';
 import Settings from './components/Settings.tsx';
 import AchievementsPage from './components/AchievementsPage';
 import CodeShare from './components/CodeShare';
+import PaymentDebugger from './components/PaymentDebugger';
+import CheckoutPage from './components/CheckoutPage';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -153,6 +155,7 @@ function AppContent() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/achievements" element={<AchievementsPage />} />
           <Route path="/share" element={<CodeShare />} />
+          <Route path="/checkout/:courseId" element={<CheckoutPage />} />
           <Route path="/courses/:courseSlug" element={
             <CourseWrapper>
               {(course) => (

@@ -99,6 +99,10 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  enrolledCourses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
   createdAt: {
     type: Date,
     default: Date.now
