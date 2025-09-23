@@ -40,7 +40,7 @@ async function testCodeEditor() {
   
   for (const test of testCases) {
     try {
-      const response = await fetch('http://localhost:5001/api/code/execute', {
+      const response = await fetch(process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api/code/execute' : 'http://localhost:5001/api/code/execute', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

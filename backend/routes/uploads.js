@@ -27,7 +27,7 @@ const upload = multer({ storage });
 router.post('/video', auth, requireRole(['admin','instructor']), upload.single('file'), (req, res) => {
   try {
     const filename = req.file.filename;
-    const url = `${process.env.BACKEND_PUBLIC_URL || `http://localhost:${process.env.PORT || 5000}`}/static/videos/${filename}`;
+    const url = `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 5001}`}/static/videos/${filename}`;
     res.json({ url, filename });
   } catch (e) {
     res.status(500).json({ message: 'Upload failed' });

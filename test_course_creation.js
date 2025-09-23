@@ -1,7 +1,7 @@
 // Test script to debug course creation issues
 const fetch = require('node-fetch');
 
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api' : 'http://localhost:5000/api';
 
 async function testCourseCreation() {
   console.log('🧪 Testing Course Creation...\n');

@@ -1,7 +1,7 @@
 // Test both code editor issues are fixed
 const axios = require('axios');
 
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api' : 'http://localhost:5001/api';
 
 async function testCodeEditorFixes() {
   console.log('Testing Code Editor Fixes...\n');

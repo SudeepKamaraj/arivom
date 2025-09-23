@@ -6,7 +6,7 @@ async function testJavaCourseAPI() {
     console.log('🧪 Testing Java course API...');
     
     // Test courses list API
-    const response = await axios.get('http://localhost:5001/api/courses');
+    const response = await axios.get(process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api/courses' : 'http://localhost:5001/api/courses');
     const courses = response.data;
     
     console.log(`📋 Found ${courses.length} courses`);
@@ -23,7 +23,7 @@ async function testJavaCourseAPI() {
       });
       
       // Test individual course API
-      const courseResponse = await axios.get(`http://localhost:5001/api/courses/${javaCourse._id}`);
+      const courseResponse = await axios.get(`${process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api' : 'http://localhost:5001/api'}/courses/${javaCourse._id}`);
       const courseDetail = courseResponse.data;
       
       console.log('🔍 Course detail API response:', {

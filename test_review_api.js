@@ -1,5 +1,5 @@
 // Simple test to check review API functionality
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api' : 'http://localhost:5000/api';
 
 async function testReviewAPI() {
   console.log('🧪 Testing Review API Functionality...\n');

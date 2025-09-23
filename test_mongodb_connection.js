@@ -1,7 +1,7 @@
 // Test script to verify MongoDB connection and API endpoints
 console.log('🧪 Testing MongoDB Connection and API Endpoints...\n');
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? 'https://arivom-backend.onrender.com/api' : 'http://localhost:5000/api';
 
 // Test functions
 const testEndpoints = async () => {
