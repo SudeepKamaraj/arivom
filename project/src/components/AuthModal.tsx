@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { X, BookOpen } from 'lucide-react';
+import { getApiUrl } from '../utils/apiConfig';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -40,7 +41,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5001/api/auth/check-availability', {
+      const response = await fetch(getApiUrl('auth/check-availability'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

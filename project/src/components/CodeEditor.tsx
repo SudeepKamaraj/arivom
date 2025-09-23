@@ -1,5 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
+import { getApiUrl } from '../utils/apiConfig';
 
 // Supported programming languages with Judge0 IDs
 const LANGUAGES = [
@@ -225,7 +226,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         stdin: input || ''
       };
 
-      const response = await fetch('http://localhost:5001/api/code/execute', {
+      const response = await fetch(getApiUrl('code/execute'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle, Award, Star, X, MessageSquare } from 'lucide-react';
 import ReviewForm from './ReviewForm';
+import { getApiUrl } from '../utils/apiConfig';
 
 interface CourseCompletionModalProps {
   isOpen: boolean;
@@ -42,7 +43,7 @@ const CourseCompletionModal: React.FC<CourseCompletionModalProps> = ({
       console.log('Submitting review:', { courseId, ...reviewData });
       
       // Using the same port as the server
-      const response = await fetch('http://localhost:5001/api/reviews', {
+      const response = await fetch(getApiUrl('reviews'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

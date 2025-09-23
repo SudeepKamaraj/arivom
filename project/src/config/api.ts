@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:5001/api',
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://arivom-backend.onrender.com/api',
   ENDPOINTS: {
     AUTH: {
       LOGIN: '/auth/login',

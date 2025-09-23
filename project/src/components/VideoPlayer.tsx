@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
 import { ArrowLeft, Play, Pause, Volume2, Maximize2, Check, Settings, Sparkles } from 'lucide-react';
+import { getApiUrl } from '../utils/apiConfig';
 
 interface VideoPlayerProps {
   lesson: any;
@@ -23,7 +24,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       const token = localStorage.getItem('authToken');
       if (!token || !course?._id || !lesson?.id) return;
 
-      const response = await fetch(`http://localhost:5001/api/courses/${course._id}/progress/video`, {
+      const response = await fetch(getApiUrl(`courses/${course._id}/progress/video`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -41,7 +42,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         
         // Check for achievements after video completion
         try {
-          await fetch('http://localhost:5001/api/achievements/check', {
+          await fetch(getApiUrl('achievements/check'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

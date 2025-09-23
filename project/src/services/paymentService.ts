@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://arivom-backend.onrender.com/api';
 
 interface RazorpayResponse {
   razorpay_payment_id: string;
@@ -231,8 +231,13 @@ class PaymentService {
   }> {
     try {
       // In development mode, use test payment instead of Razorpay
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('Using test payment mode (localhost detected)');
+      const isDevelopment = window.location.hostname === 'localhost' || 
+                           window.location.hostname === '127.0.0.1' ||
+                           import.meta.env.DEV ||
+                           import.meta.env.MODE === 'development';
+                           
+      if (isDevelopment) {
+        console.log('Using test payment mode (development environment detected)');
         return this.processTestPayment(courseId);
       }
       
