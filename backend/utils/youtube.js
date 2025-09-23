@@ -44,9 +44,14 @@ function isValidYouTubeVideoId(videoId) {
 }
 
 /**
- * Generate YouTube embed URL from video ID
+ * Generate YouTube embed URL from video ID or URL
  */
-function generateYouTubeEmbedUrl(videoId, options = {}) {
+function generateYouTubeEmbedUrl(videoIdOrUrl, options = {}) {
+  // Extract video ID if a URL is provided
+  const videoId = typeof videoIdOrUrl === 'string' && videoIdOrUrl.includes('youtube') 
+    ? extractYouTubeVideoId(videoIdOrUrl) 
+    : videoIdOrUrl;
+    
   if (!isValidYouTubeVideoId(videoId)) {
     throw new Error('Invalid YouTube video ID');
   }

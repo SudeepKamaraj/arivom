@@ -108,6 +108,7 @@ app.use('/api/videos', require('./routes/videos'));
 app.use('/api/video-stream', require('./routes/video-stream'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/upload', require('./routes/upload')); // New video upload route
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/reviews', require('./routes/reviews'));

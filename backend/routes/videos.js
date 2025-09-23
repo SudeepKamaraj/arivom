@@ -11,6 +11,7 @@ const {
   generateYouTubeEmbedUrl,
   generateYouTubeThumbnail 
 } = require('../utils/youtube');
+const videoPlatforms = require('../utils/video-platforms');
 
 const router = express.Router();
 
@@ -27,7 +28,6 @@ const VIDEO_DATA = {
     youtubeId: 'Ke90Tje7VS0', // React tutorial
     title: 'Introduction to React',
     duration: 596,
-    thumbnail: generateYouTubeThumbnail('Ke90Tje7VS0'),
     courseId: 'react-course',
     isPublic: true,
     requiresAuth: false
@@ -37,7 +37,6 @@ const VIDEO_DATA = {
     youtubeId: 'SqcY0GlETPk', // React components tutorial
     title: 'React Components Basics',
     duration: 653,
-    thumbnail: generateYouTubeThumbnail('SqcY0GlETPk'),
     courseId: 'react-course',
     isPublic: true,
     requiresAuth: false
@@ -62,7 +61,6 @@ const VIDEO_DATA = {
     youtubeId: 'TlB_eWDSMt4', // Node.js tutorial
     title: 'Node.js Basics (Free)',
     duration: 612,
-    thumbnail: generateYouTubeThumbnail('TlB_eWDSMt4'),
     courseId: 'node-course',
     isPublic: true,
     requiresAuth: false
@@ -91,18 +89,19 @@ router.get('/metadata/:lessonId', auth, async (req, res) => {
       return res.status(404).json({ message: 'Video not found' });
     }
 
-    // Log video view activity
-    req.activityData = {
-      type: 'video_watch',
-      description: `Started watching video: ${videoData.title}`,
-      metadata: { lessonId, videoTitle: videoData.title, videoType: videoData.type }
-    };
+    // Log video view activity (only if user is authenticated)
+    if (req.user) {
+      req.activityData = {
+        type: 'video_watch',
+        description: `Started watching video: ${videoData.title}`,
+        metadata: { lessonId, videoTitle: videoData.title, videoType: videoData.type }
+      };
+    }
 
     const baseResponse = {
       id: lessonId,
       title: videoData.title,
       duration: videoData.duration,
-      thumbnail: videoData.thumbnail,
       courseId: videoData.courseId,
       type: videoData.type,
       isPublic: videoData.isPublic,
@@ -110,11 +109,13 @@ router.get('/metadata/:lessonId', auth, async (req, res) => {
     };
 
     if (videoData.type === 'youtube') {
-      // YouTube videos - return embed URL directly
+      // YouTube videos - return embed URL directly and generate thumbnail
+      const thumbnail = videoData.thumbnail || generateYouTubeThumbnail(videoData.youtubeId);
       res.json({
         ...baseResponse,
         youtubeId: videoData.youtubeId,
         embedUrl: generateYouTubeEmbedUrl(videoData.youtubeId),
+        thumbnail: thumbnail,
         accessType: 'public',
         message: 'YouTube video - publicly accessible'
       });
@@ -123,6 +124,7 @@ router.get('/metadata/:lessonId', auth, async (req, res) => {
       res.json({
         ...baseResponse,
         videoId: videoData.videoId,
+        thumbnail: videoData.thumbnail,
         requiresSecureAccess: videoData.requiresSecureAccess,
         accessType: 'premium',
         message: 'Premium video - requires course enrollment'
@@ -130,6 +132,46 @@ router.get('/metadata/:lessonId', auth, async (req, res) => {
     }
   } catch (error) {
     console.error('Video metadata error:', error);
+    res.status(500).json({ message: 'Server error fetching video metadata' });
+  }
+});
+
+// Get public video metadata (no authentication required for YouTube videos)
+router.get('/public/metadata/:lessonId', async (req, res) => {
+  try {
+    const { lessonId } = req.params;
+    const videoData = VIDEO_DATA[lessonId];
+    
+    if (!videoData) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    // Only allow public access to YouTube videos
+    if (videoData.type !== 'youtube' || !videoData.isPublic) {
+      return res.status(403).json({ 
+        message: 'This video requires authentication. Please login to access premium content.',
+        type: videoData.type,
+        requiresAuth: true
+      });
+    }
+
+    const thumbnail = videoData.thumbnail || generateYouTubeThumbnail(videoData.youtubeId);
+    
+    res.json({
+      id: lessonId,
+      title: videoData.title,
+      duration: videoData.duration,
+      courseId: videoData.courseId,
+      type: videoData.type,
+      youtubeId: videoData.youtubeId,
+      embedUrl: generateYouTubeEmbedUrl(videoData.youtubeId),
+      thumbnail: thumbnail,
+      isPublic: true,
+      accessType: 'public',
+      message: 'YouTube video - publicly accessible'
+    });
+  } catch (error) {
+    console.error('Public video metadata error:', error);
     res.status(500).json({ message: 'Server error fetching video metadata' });
   }
 });
@@ -315,6 +357,148 @@ router.get('/by-type/:type', auth, async (req, res) => {
     console.error('Get videos by type error:', error);
     res.status(500).json({ message: 'Server error fetching videos by type' });
   }
+});
+
+/**
+ * Process any video URL (YouTube, Vimeo, Dailymotion, or direct)
+ * POST /api/videos/process-url
+ */
+router.post('/process-url', async (req, res) => {
+  try {
+    const { url, title, description, courseId, lessonId, duration } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ message: 'Video URL is required' });
+    }
+
+    // Process the video URL
+    const videoData = videoPlatforms.processVideoUrl(url);
+    
+    // Add additional metadata
+    const processedVideo = {
+      ...videoData,
+      title: title || `Video from ${videoData.platform}`,
+      description: description || '',
+      courseId: courseId || '',
+      lessonId: lessonId || '',
+      duration: duration ? parseInt(duration) : null,
+      createdAt: new Date()
+    };
+
+    res.json({
+      success: true,
+      message: `${videoData.platform} video processed successfully`,
+      video: processedVideo
+    });
+
+  } catch (error) {
+    console.error('Process video URL error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to process video URL'
+    });
+  }
+});
+
+/**
+ * Add video from various platforms to course
+ * POST /api/videos/add-video
+ */
+router.post('/add-video', auth, async (req, res) => {
+  try {
+    const { url, title, description, courseId, lessonId, duration, isPublic = true } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ message: 'Video URL is required' });
+    }
+
+    if (!lessonId) {
+      return res.status(400).json({ message: 'Lesson ID is required' });
+    }
+
+    // Process the video URL
+    const videoData = videoPlatforms.processVideoUrl(url);
+    
+    // Create video entry for VIDEO_DATA
+    const newVideo = {
+      type: videoData.platform,
+      videoId: videoData.videoId,
+      originalUrl: url,
+      embedUrl: videoData.embedUrl,
+      thumbnailUrl: videoData.thumbnailUrl,
+      title: title || `Video from ${videoData.platform}`,
+      description: description || '',
+      courseId: courseId || '',
+      duration: duration ? parseInt(duration) : null,
+      isPublic: isPublic,
+      requiresAuth: !isPublic,
+      createdAt: new Date(),
+      createdBy: req.user.id
+    };
+
+    // Here you would add to your VIDEO_DATA or save to database
+    // For demonstration, we'll just return the video data
+    
+    res.json({
+      success: true,
+      message: `${videoData.platform} video added successfully`,
+      lessonId: lessonId,
+      video: newVideo
+    });
+
+  } catch (error) {
+    console.error('Add video error:', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to add video'
+    });
+  }
+});
+
+/**
+ * Get supported video platforms
+ * GET /api/videos/supported-platforms
+ */
+router.get('/supported-platforms', (req, res) => {
+  res.json({
+    platforms: [
+      {
+        name: 'YouTube',
+        id: 'youtube',
+        description: 'YouTube videos and playlists',
+        example: 'https://www.youtube.com/watch?v=VIDEO_ID',
+        features: ['Embed', 'Thumbnails', 'Public Access']
+      },
+      {
+        name: 'Vimeo',
+        id: 'vimeo',
+        description: 'Vimeo videos',
+        example: 'https://vimeo.com/VIDEO_ID',
+        features: ['Embed', 'Thumbnails', 'High Quality']
+      },
+      {
+        name: 'Dailymotion',
+        id: 'dailymotion',
+        description: 'Dailymotion videos',
+        example: 'https://www.dailymotion.com/video/VIDEO_ID',
+        features: ['Embed', 'Thumbnails']
+      },
+      {
+        name: 'Direct Video',
+        id: 'direct',
+        description: 'Direct video file links (MP4, WebM, etc.)',
+        example: 'https://example.com/video.mp4',
+        features: ['Direct Streaming', 'Custom Player']
+      },
+      {
+        name: 'File Upload',
+        id: 'upload',
+        description: 'Upload video files directly',
+        example: 'Use /api/upload/video endpoint',
+        features: ['Private Hosting', 'Full Control', 'No External Dependencies']
+      }
+    ]
+  });
 });
 
 module.exports = router;
