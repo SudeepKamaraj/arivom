@@ -21,7 +21,50 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [availability, setAvailability] = useState<{
+    username: { available: boolean | null; message: string };
+    email: { available: boolean | null; message: string };
+  }>({
+    username: { available: null, message: '' },
+    email: { available: null, message: '' }
+  });
   const { login, register } = useAuth();
+
+  const checkAvailability = async (field: 'username' | 'email', value: string) => {
+    if (!value.trim()) {
+      setAvailability(prev => ({
+        ...prev,
+        [field]: { available: null, message: '' }
+      }));
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5001/api/auth/check-availability', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ [field]: value })
+      });
+
+      const data = await response.json();
+      
+      if (data.available) {
+        setAvailability(prev => ({
+          ...prev,
+          [field]: { available: true, message: `${field} is available` }
+        }));
+      } else {
+        setAvailability(prev => ({
+          ...prev,
+          [field]: { available: false, message: data.message }
+        }));
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error);
+    }
+  };
 
   const skillOptions = [
     'JavaScript', 'Python', 'React', 'Node.js', 'Data Science', 'Machine Learning',
@@ -64,7 +107,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
         
         success = await register(formData.username, formData.email, formData.password, formData.firstName, formData.lastName, selectedSkills, formData.interests, formData.careerObjective);
         if (!success) {
-          setError('Registration failed. User might already exist.');
+          const specificError = (window as any).lastAuthError;
+          setError(specificError || 'Registration failed. Please check if username/email is already taken and try again.');
         }
       }
       
@@ -79,10 +123,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+
+    // Check availability for username and email fields
+    if (!isLogin && (name === 'username' || name === 'email')) {
+      // Debounce the API call
+      setTimeout(() => {
+        checkAvailability(name as 'username' | 'email', value);
+      }, 500);
+    }
   };
 
   const toggleSkill = (skill: string) => {
@@ -133,11 +186,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                     id="username"
                     name="username"
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      availability.username.available === false 
+                        ? 'border-red-300 bg-red-50' 
+                        : availability.username.available === true 
+                        ? 'border-green-300 bg-green-50'
+                        : 'border-gray-300'
+                    }`}
                     placeholder="Choose a unique username"
                     value={formData.username}
                     onChange={handleInputChange}
                   />
+                  {availability.username.message && (
+                    <p className={`text-xs mt-1 ${
+                      availability.username.available ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {availability.username.message}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -231,11 +297,24 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 id="email"
                 name="email"
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  !isLogin && availability.email.available === false 
+                    ? 'border-red-300 bg-red-50' 
+                    : !isLogin && availability.email.available === true 
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-gray-300'
+                }`}
                 placeholder="Enter your email"
                 value={formData.email}
                 onChange={handleInputChange}
               />
+              {!isLogin && availability.email.message && (
+                <p className={`text-xs mt-1 ${
+                  availability.email.available ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {availability.email.message}
+                </p>
+              )}
             </div>
 
             <div>

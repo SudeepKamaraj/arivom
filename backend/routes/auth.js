@@ -6,6 +6,35 @@ const { auth, logActivity } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Check username/email availability
+router.post('/check-availability', async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    
+    if (existingUser) {
+      const conflicts = [];
+      if (existingUser.email === email) conflicts.push('email');
+      if (existingUser.username === username) conflicts.push('username');
+      
+      return res.status(200).json({ 
+        available: false,
+        conflicts,
+        message: `${conflicts.join(' and ')} already taken`
+      });
+    }
+    
+    res.status(200).json({ 
+      available: true,
+      message: 'Username and email are available'
+    });
+  } catch (error) {
+    console.error('Availability check error:', error);
+    res.status(500).json({ message: 'Server error checking availability' });
+  }
+});
+
 // User Registration
 router.post('/register', async (req, res) => {
   try {
@@ -15,8 +44,13 @@ router.post('/register', async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
+      const conflicts = [];
+      if (existingUser.email === email) conflicts.push('email');
+      if (existingUser.username === username) conflicts.push('username');
+      
       return res.status(400).json({ 
-        message: 'User with this email or username already exists.' 
+        message: `Registration failed: ${conflicts.join(' and ')} already exists.`,
+        conflicts
       });
     }
 

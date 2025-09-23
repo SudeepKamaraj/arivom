@@ -17,6 +17,7 @@ import AdminCourses from './components/AdminCourses';
 import Profile from './components/Profile.tsx';
 import Settings from './components/Settings.tsx';
 import AchievementsPage from './components/AchievementsPage';
+import CodeShare from './components/CodeShare';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -151,6 +152,7 @@ function AppContent() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/achievements" element={<AchievementsPage />} />
+          <Route path="/share" element={<CodeShare />} />
           <Route path="/courses/:courseSlug" element={
             <CourseWrapper>
               {(course) => (

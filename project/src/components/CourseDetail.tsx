@@ -94,9 +94,15 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         }
       } catch (error) {
         console.error('Error checking course access:', error);
-        // Fallback - assume it's a free course for backward compatibility
-        setHasAccess(true);
-        setPaymentStatus({ isFree: true, canAccess: true });
+        // SECURITY: On error, default to NO access for paid courses
+        // Only allow access if it's clearly a free course (price = 0)
+        const isFreeFromPricing = course.price === 0;
+        setHasAccess(isFreeFromPricing);
+        setPaymentStatus({ 
+          isFree: isFreeFromPricing, 
+          canAccess: isFreeFromPricing,
+          error: true 
+        });
         
         // Don't automatically mark as completed for fallback
         // Course completion requires both video progress AND assessment completion
@@ -289,32 +295,35 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 {course.description}
               </p>
 
-              {/* Code Editor Section - Always show for all courses */}
-              {true && (
+              {/* Code Editor Section - Only show if user has access */}
+              {hasAccess && course.codeEditor?.enabled && (
                 <div className="mb-8">
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                        <span className="text-white text-sm font-bold">{'</>'}</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800">Interactive Code Editor</h3>
-                        <p className="text-sm text-gray-600">Practice programming concepts with our built-in code editor</p>
-                      </div>
-                    </div>
-                    
-                    <CodeEditor
-                      supportedLanguages={course.codeEditor?.supportedLanguages || ['javascript', 'python', 'java', 'cpp', 'c']}
-                      initialLanguage={course.codeEditor?.defaultLanguage || 'javascript'}
-                      initialCode={course.codeEditor?.defaultCode || '// Write your code here\nconsole.log("Hello, World!");'}
-                      readOnly={false}
-                      height="500px"
-                    />
-                    
-                    <div className="mt-4 text-xs text-gray-500">
-                      💡 Tip: You can write, edit, and execute code in multiple programming languages. Click 'Run Code' to see the output!
-                    </div>
-                  </div>
+                  <h3 className="text-xl font-semibold mb-4 text-gray-800">🚀 Interactive Code Editor</h3>
+                  <CodeEditor
+                    supportedLanguages={course.codeEditor?.supportedLanguages || ['javascript', 'python', 'java', 'cpp', 'c']}
+                    initialLanguage={course.codeEditor?.defaultLanguage || 'javascript'}
+                    initialCode={course.codeEditor?.defaultCode || '// Write your code here\nconsole.log("Hello, World!");'}
+                    readOnly={false}
+                    height="500px"
+                  />
+                </div>
+              )}
+
+              {/* Temporary test - show CodeEditor always for debugging */}
+              {course && (
+                <div className="mb-8 border-2 border-red-200 p-4 rounded-lg">
+                  <h3 className="text-xl font-semibold mb-2 text-red-600">🔧 Debug: Code Editor Test</h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    hasAccess: {hasAccess.toString()}, 
+                    codeEditor.enabled: {course.codeEditor?.enabled?.toString() || 'undefined'}
+                  </p>
+                  <CodeEditor
+                    supportedLanguages={['javascript', 'python', 'java']}
+                    initialLanguage="javascript"
+                    initialCode="// Debug Test - This CodeEditor should always show\nconsole.log('CodeEditor is working!');"
+                    readOnly={false}
+                    height="400px"
+                  />
                 </div>
               )}
 

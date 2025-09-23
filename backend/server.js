@@ -29,6 +29,7 @@ app.use('/api/uploads', require('./routes/uploads'));
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/achievements', require('./routes/achievements'));
 app.use('/api/code', require('./routes/code'));
 
 // Health check endpoint
