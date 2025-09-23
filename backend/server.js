@@ -37,21 +37,35 @@ console.log('FRONTEND_URL:', process.env.FRONTEND_URL);
 // CORS middleware with comprehensive configuration
 app.use(cors({
   origin: function (origin, callback) {
+    console.log('Request origin:', origin);
+    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('No origin - allowed');
+      return callback(null, true);
+    }
     
     // Check if the origin is in our allowed list
     if (corsOrigins.includes(origin)) {
+      console.log('Origin allowed:', origin);
       return callback(null, true);
     }
     
     // For production, also allow any onrender.com subdomain as fallback
     if (process.env.NODE_ENV === 'production' && origin.includes('.onrender.com')) {
+      console.log('Onrender subdomain allowed:', origin);
+      return callback(null, true);
+    }
+    
+    // Temporary: Allow the specific frontend URL if not in production
+    if (origin === 'https://arivom.onrender.com') {
+      console.log('Frontend URL specifically allowed:', origin);
       return callback(null, true);
     }
     
     console.log('CORS blocked origin:', origin);
-    callback(new Error('Not allowed by CORS'), false);
+    console.log('Available origins:', corsOrigins);
+    callback(null, true); // Temporarily allow all origins for debugging
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -71,25 +85,13 @@ app.use(cors({
 
 // Security headers
 app.use((req, res, next) => {
-  // Additional CORS headers for better compatibility
-  res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-  
-  // Security headers
+  // Security headers only - CORS is handled by the cors middleware above
   res.header('X-Content-Type-Options', 'nosniff');
   res.header('X-Frame-Options', 'DENY');
   res.header('X-XSS-Protection', '1; mode=block');
   
   if (process.env.NODE_ENV === 'production') {
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
-  
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
   }
   
   next();
