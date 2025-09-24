@@ -16,6 +16,14 @@ interface User {
   loginCount: number;
   createdAt: string;
   updatedAt: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
+  website?: string;
+  linkedin?: string;
+  github?: string;
+  xp?: number;
+  level?: number;
 }
 
 interface AuthContextType {

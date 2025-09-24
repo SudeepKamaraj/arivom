@@ -418,15 +418,17 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               <div className="bg-isabelline rounded-lg p-4 mb-6">
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-medium text-dark-gunmetal">Course Progress</span>
-                  <span className="text-sm font-semibold text-dark-gunmetal">{progress}%</span>
+                  <span className={`text-sm font-semibold ${isCompleted ? 'text-green-600' : 'text-dark-gunmetal'}`}>
+                    {isCompleted ? 'Completed ✅' : `${progress}%`}
+                  </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-3">
                   <div
-                    className="bg-cyber-grape h-3 rounded-full transition-all duration-500"
+                    className={`h-3 rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-cyber-grape'}`}
                     style={{ width: `${progress}%` }}
                   />
                 </div>
-                {lastLesson && (
+                {lastLesson && !isCompleted && (
                   <div className="mt-4 flex items-center justify-between">
                     <span className="text-sm text-dark-gunmetal/70">Last lesson: <span className="font-medium">{lastLesson.title}</span></span>
                     <button
@@ -435,6 +437,15 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                     >
                       Continue
                     </button>
+                  </div>
+                )}
+                {isCompleted && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className="text-sm text-green-600 font-medium">🎉 Congratulations! You've completed this course!</span>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <span className="text-sm font-semibold text-green-600">Course Completed</span>
+                    </div>
                   </div>
                 )}
               </div>
