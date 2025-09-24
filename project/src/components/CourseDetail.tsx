@@ -389,23 +389,12 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 </div>
               )}
 
-              {/* Temporary test - show CodeEditor always for debugging */}
-              {course && (
-                <div className="mb-8 border-2 border-red-200 p-4 rounded-lg">
-                  <h3 className="text-xl font-semibold mb-2 text-red-600">🔧 Debug: Code Editor Test</h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    hasAccess: {hasAccess.toString()}, 
-                    codeEditor.enabled: {course.codeEditor?.enabled?.toString() || 'undefined'}
-                  </p>
-                  <CodeEditor
-                    supportedLanguages={['javascript', 'python', 'java']}
-                    initialLanguage="javascript"
-                    initialCode="// Debug Test - This CodeEditor should always show\nconsole.log('CodeEditor is working!');"
-                    readOnly={false}
-                    height="400px"
-                  />
-                </div>
-              )}
+              {/* Debug course.codeEditor settings */}
+              {console.log('CourseDetail Code Editor Debug:', {
+                hasAccess,
+                codeEditorConfig: course.codeEditor,
+                shouldShowEditor: hasAccess && course.codeEditor?.enabled
+              })}
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-dark-gunmetal/70 mb-6">
                 <div className="flex items-center space-x-2">
