@@ -101,33 +101,6 @@ const courseSchema = new mongoose.Schema({
     }
   },
   tags: [String],
-  // Code Editor Configuration
-  codeEditor: {
-    enabled: {
-      type: Boolean,
-      default: false
-    },
-    supportedLanguages: [{
-      type: String,
-      enum: ['javascript', 'python', 'java', 'cpp', 'c', 'csharp', 'go', 'php', 'ruby', 'rust', 'kotlin', 'typescript']
-    }],
-    defaultLanguage: {
-      type: String,
-      default: 'javascript'
-    },
-    defaultCode: {
-      type: String,
-      default: ''
-    },
-    allowExecution: {
-      type: Boolean,
-      default: true
-    },
-    showThemes: {
-      type: Boolean,
-      default: true
-    }
-  },
   isPublished: {
     type: Boolean,
     default: false

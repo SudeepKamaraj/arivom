@@ -112,9 +112,11 @@ app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/achievements', require('./routes/achievements'));
-app.use('/api/code', require('./routes/code'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/debug', require('./routes/debug'));
+app.use('/api/learning', require('./routes/learning'));
+app.use('/api/peers', require('./routes/peers'));
+app.use('/api/career', require('./routes/career'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

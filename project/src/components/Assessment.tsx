@@ -328,6 +328,14 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
       
       // Show completion modal for successful completion
       if (passed) {
+        // Set flag to indicate assessment was just completed successfully
+        sessionStorage.setItem('assessmentJustCompleted', 'true');
+        
+        // Immediately notify parent component that assessment was passed
+        if (onComplete) {
+          onComplete(true);
+        }
+        
         setTimeout(() => {
           setShowCompletionModal(true);
         }, 2000);
@@ -518,6 +526,35 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
           
           {assessmentResult.passed && (
             <>
+              {/* Course Completion Status */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-xl p-6 mb-6">
+                <div className="text-center">
+                  <div className="flex items-center justify-center space-x-2 text-green-700 mb-3">
+                    <CheckCircle className="w-8 h-8" />
+                    <span className="text-2xl font-bold">Course Completed!</span>
+                  </div>
+                  <p className="text-green-600 mb-4">
+                    🎉 Congratulations! You've successfully completed all lessons and passed the assessment.
+                  </p>
+                  <div className="bg-white rounded-lg p-4 border border-green-200">
+                    <div className="flex items-center justify-center space-x-4 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>All Lessons Watched</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span>Assessment Passed</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Award className="w-4 h-4 text-green-500" />
+                        <span>Certificate Earned</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
               <div className="flex items-center justify-center space-x-2 text-green-600 mb-6">
                 <Award className="w-6 h-6" />
                 <span className="font-semibold">Certificate Generated!</span>
@@ -561,6 +598,10 @@ const Assessment: React.FC<AssessmentProps> = ({ course, onComplete, onBack }) =
             className="mt-6 px-6 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg font-semibold transition-colors"
             onClick={() => {
               if (course?._id || course?.id) {
+                // Ensure the completion flag is set when returning to course after success
+                if (assessmentResult && assessmentResult.score >= 70) {
+                  sessionStorage.setItem('assessmentJustCompleted', 'true');
+                }
                 navigate(`/courses/${course._id || course.id}`);
               }
             }}

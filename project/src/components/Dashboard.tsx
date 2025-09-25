@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses, Course } from '../contexts/CourseContext';
 import { BookOpen, Clock, Award, TrendingUp, Search, Filter, Play, CheckCircle, Star, ArrowRight, CreditCard, DollarSign } from 'lucide-react';
+import UniqueFeatureNav from './UniqueFeatureNav';
 import paymentService from '../services/paymentService';
 
 interface DashboardProps {
@@ -282,6 +283,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-8">
+              {/* Unique Features Section */}
+              <UniqueFeatureNav />
+              
               {/* Progress Summary */}
               <div className="bg-white dark:bg-gray-900 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
                 <h3 className="text-xl font-semibold text-dark-gunmetal dark:text-white mb-4">Your Learning Progress</h3>

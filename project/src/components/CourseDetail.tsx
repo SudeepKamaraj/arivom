@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
-import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign, Brain, Calendar } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import PaymentModal from './PaymentModal';
-import CodeEditor from './CodeEditor';
+import LearningCompanion from './LearningCompanion';
+import SmartStudyPlanner from './SmartStudyPlanner';
 import paymentService from '../services/paymentService';
 
 interface CourseDetailProps {
@@ -32,6 +33,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
   // Add this prop to force refresh review eligibility after assessment
   const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
   const [showMessage, setShowMessage] = useState<string | null>(null);
+  const [justCompletedAssessment, setJustCompletedAssessment] = useState(false);
   
   // Payment related state
   const [paymentStatus, setPaymentStatus] = useState<any>(null);
@@ -149,6 +151,46 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
       totalLessons: course.lessons?.length || course.videos?.length || 0
     });
   }, [course, user, getCourseProgress]);
+
+  // Handle forced refresh after assessment completion
+  useEffect(() => {
+    const forceRefresh = sessionStorage.getItem('forceRefreshCourse');
+    if (forceRefresh) {
+      sessionStorage.removeItem('forceRefreshCourse');
+      
+      // Immediately check course completion status again
+      const recheckCompletion = async () => {
+        if (user && course) {
+          const courseId = (course as any)._id || course.id;
+          const token = localStorage.getItem('authToken');
+          
+          if (token) {
+            try {
+              const response = await fetch(`http://localhost:5001/api/courses/${courseId}/status`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              
+              if (response.ok) {
+                const courseStatus = await response.json();
+                setIsCompleted(courseStatus.completed);
+                
+                // Also update progress to 100% if completed
+                if (courseStatus.completed) {
+                  setProgress(100);
+                }
+              }
+            } catch (error) {
+              console.error('Error rechecking course completion:', error);
+            }
+          }
+        }
+      };
+      
+      recheckCompletion();
+    }
+  }, [course, user]);
 
   if (!course) return null;
 
@@ -269,6 +311,18 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
     // If we're marked as completed, force-refresh the review section
     if (isCompleted) {
       setReviewRefreshKey(prev => prev + 1);
+      // Check if this is a recent completion (user just returned from assessment)
+      const wasJustCompleted = sessionStorage.getItem('assessmentJustCompleted');
+      if (wasJustCompleted) {
+        setJustCompletedAssessment(true);
+        sessionStorage.removeItem('assessmentJustCompleted');
+        // Show completion message briefly
+        setShowMessage('🎉 Congratulations! You have successfully completed the course!');
+        setTimeout(() => {
+          setShowMessage(null);
+          setJustCompletedAssessment(false);
+        }, 5000);
+      }
     }
   }, [isCompleted]);
 
@@ -375,26 +429,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 {course.description}
               </p>
 
-              {/* Code Editor Section - Only show if user has access */}
-              {hasAccess && course.codeEditor?.enabled && (
-                <div className="mb-8">
-                  <h3 className="text-xl font-semibold mb-4 text-gray-800">🚀 Interactive Code Editor</h3>
-                  <CodeEditor
-                    supportedLanguages={course.codeEditor?.supportedLanguages || ['javascript', 'python', 'java', 'cpp', 'c']}
-                    initialLanguage={course.codeEditor?.defaultLanguage || 'javascript'}
-                    initialCode={course.codeEditor?.defaultCode || '// Write your code here\nconsole.log("Hello, World!");'}
-                    readOnly={false}
-                    height="500px"
-                  />
-                </div>
-              )}
 
-              {/* Debug course.codeEditor settings */}
-              {console.log('CourseDetail Code Editor Debug:', {
-                hasAccess,
-                codeEditorConfig: course.codeEditor,
-                shouldShowEditor: hasAccess && course.codeEditor?.enabled
-              })}
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-dark-gunmetal/70 mb-6">
                 <div className="flex items-center space-x-2">
@@ -440,12 +475,45 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                   </div>
                 )}
                 {isCompleted && (
-                  <div className="mt-4 flex items-center justify-between">
-                    <span className="text-sm text-green-600 font-medium">🎉 Congratulations! You've completed this course!</span>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                      <span className="text-sm font-semibold text-green-600">Course Completed</span>
+                  <div className="mt-4">
+                    <div className={`flex items-center justify-between p-4 rounded-lg transition-all duration-500 ${
+                      justCompletedAssessment 
+                        ? 'bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 shadow-lg' 
+                        : 'bg-green-50 border border-green-200'
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-full ${
+                          justCompletedAssessment ? 'bg-green-500 animate-pulse' : 'bg-green-500'
+                        }`}>
+                          <CheckCircle className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <span className="text-lg font-bold text-green-700">Course Completed!</span>
+                          <p className="text-sm text-green-600">You've successfully finished all lessons and passed the assessment</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => navigate('/dashboard')}
+                          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                        >
+                          Back to Dashboard
+                        </button>
+                      </div>
                     </div>
+                    {justCompletedAssessment && (
+                      <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center space-x-2">
+                          <Award className="w-5 h-5 text-blue-600" />
+                          <span className="text-sm font-medium text-blue-700">Next Steps:</span>
+                        </div>
+                        <ul className="mt-2 text-sm text-blue-600 space-y-1">
+                          <li>• Download your certificate from the dashboard</li>
+                          <li>• Leave a review to help other students</li>
+                          <li>• Explore more courses to continue learning</li>
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -664,6 +732,21 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
             )}
           </div>
         </div>
+      </div>
+
+      {/* Unique Features Row */}
+      <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-8">
+        {/* AI Learning Companion */}
+        <LearningCompanion 
+          courseId={(course as any)._id || course.id}
+          className="h-fit"
+        />
+        
+        {/* Smart Study Planner */}
+        <SmartStudyPlanner 
+          courseId={(course as any)._id || course.id}
+          className="h-fit"
+        />
       </div>
 
       {/* Reviews Section */}

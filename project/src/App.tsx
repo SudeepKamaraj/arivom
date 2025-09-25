@@ -17,9 +17,11 @@ import AdminCourses from './components/AdminCourses';
 import Profile from './components/Profile.tsx';
 import Settings from './components/Settings.tsx';
 import AchievementsPage from './components/AchievementsPage';
-import CodeShare from './components/CodeShare';
 import PaymentDebugger from './components/PaymentDebugger';
 import CheckoutPage from './components/CheckoutPage';
+import PeerLearning from './components/PeerLearning';
+import CareerHub from './components/CareerHub';
+import InteractiveAssessments from './components/InteractiveAssessments';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -154,8 +156,10 @@ function AppContent() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/achievements" element={<AchievementsPage />} />
-          <Route path="/share" element={<CodeShare />} />
           <Route path="/checkout/:courseId" element={<CheckoutPage />} />
+          <Route path="/peer-learning" element={<PeerLearning />} />
+          <Route path="/career-hub" element={<CareerHub />} />
+          <Route path="/assessments" element={<InteractiveAssessments courseId="all" />} />
           <Route path="/courses/:courseSlug" element={
             <CourseWrapper>
               {(course) => (
@@ -173,8 +177,17 @@ function AppContent() {
                       navigate(`/courses/${courseSlug}/assessment`);
                     }, 100);
                   }}
-                  onAssessmentComplete={() => {
-                    // This will handle the async update when returning from assessment
+                  onAssessmentComplete={(passed: boolean) => {
+                    // Trigger course status refresh when assessment is completed
+                    console.log('Assessment completed:', passed);
+                    if (passed) {
+                      // Set completion flag and trigger navigation back to course
+                      sessionStorage.setItem('assessmentJustCompleted', 'true');
+                      sessionStorage.setItem('forceRefreshCourse', 'true');
+                      // Navigate back to course page to show completion
+                      const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                      navigate(`/courses/${courseSlug}`);
+                    }
                   }}
                   onBack={() => navigate('/dashboard')}
                 />

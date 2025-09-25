@@ -35,14 +35,7 @@ const AdminCourses: React.FC = () => {
       }>;
       passingScore: number;
     }>,
-    codeEditor: {
-      enabled: false,
-      supportedLanguages: [],
-      defaultLanguage: 'javascript',
-      defaultCode: '',
-      allowExecution: true,
-      showThemes: true
-    }
+
   });
 
   const token = useMemo(() => localStorage.getItem('authToken') || '', []);
@@ -204,14 +197,7 @@ const AdminCourses: React.FC = () => {
           order: i + 1
         })),
         assessmentMode: form.assessmentMode,
-        codeEditor: {
-          enabled: form.codeEditor.enabled,
-          supportedLanguages: form.codeEditor.supportedLanguages,
-          defaultLanguage: form.codeEditor.defaultLanguage,
-          defaultCode: form.codeEditor.defaultCode,
-          allowExecution: form.codeEditor.allowExecution,
-          showThemes: form.codeEditor.showThemes
-        },
+
         assessments: form.assessmentMode === 'handmade' ? form.assessments.map((assessment: any) => ({
           title: assessment.title,
           description: assessment.description,
@@ -241,14 +227,7 @@ const AdminCourses: React.FC = () => {
         videos: [],
         assessmentMode: 'handmade',
         assessments: [],
-        codeEditor: {
-          enabled: false,
-          supportedLanguages: [],
-          defaultLanguage: 'javascript',
-          defaultCode: '',
-          allowExecution: true,
-          showThemes: true
-        }
+
       });
       alert('Course created successfully!');
     } catch (e) {
@@ -319,101 +298,7 @@ const AdminCourses: React.FC = () => {
             <input className="w-full border rounded px-3 py-2" placeholder="Enter tags (comma separated)" value={form.tags} onChange={e=>setForm({...form,tags:e.target.value})} />
           </div>
 
-          {/* Code Editor Configuration */}
-          <div className="md:col-span-2">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-800 mb-3">🖥️ Programming Course Settings</h3>
-              
-              {/* Enable Code Editor */}
-              <div className="mb-4">
-                <label className="flex items-center">
-                  <input 
-                    type="checkbox" 
-                    checked={form.codeEditor.enabled} 
-                    onChange={e => setForm({...form, codeEditor: {...form.codeEditor, enabled: e.target.checked}})}
-                    className="mr-2"
-                  />
-                  <span className="text-sm font-medium">Enable Code Editor</span>
-                </label>
-                <p className="text-xs text-gray-600 mt-1">Allow students to write, run, and test code in this course</p>
-              </div>
 
-              {form.codeEditor.enabled && (
-                <div className="space-y-4">
-                  {/* Supported Languages */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Supported Programming Languages</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {['javascript', 'python', 'java', 'cpp', 'c', 'csharp', 'go', 'php', 'ruby', 'rust', 'kotlin', 'typescript'].map(lang => (
-                        <label key={lang} className="flex items-center text-sm">
-                          <input 
-                            type="checkbox" 
-                            checked={form.codeEditor.supportedLanguages.includes(lang)}
-                            onChange={e => {
-                              const languages = e.target.checked 
-                                ? [...form.codeEditor.supportedLanguages, lang]
-                                : form.codeEditor.supportedLanguages.filter((l: string) => l !== lang);
-                              setForm({...form, codeEditor: {...form.codeEditor, supportedLanguages: languages}});
-                            }}
-                            className="mr-2"
-                          />
-                          {lang.charAt(0).toUpperCase() + lang.slice(1)}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Default Language */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Default Language</label>
-                    <select 
-                      value={form.codeEditor.defaultLanguage} 
-                      onChange={e => setForm({...form, codeEditor: {...form.codeEditor, defaultLanguage: e.target.value}})}
-                      className="w-full border rounded px-3 py-2 text-sm"
-                    >
-                      {['javascript', 'python', 'java', 'cpp', 'c', 'csharp', 'go', 'php', 'ruby', 'rust', 'kotlin', 'typescript'].map(lang => (
-                        <option key={lang} value={lang}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Default Code */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Default Code Template</label>
-                    <textarea 
-                      value={form.codeEditor.defaultCode} 
-                      onChange={e => setForm({...form, codeEditor: {...form.codeEditor, defaultCode: e.target.value}})}
-                      className="w-full border rounded px-3 py-2 text-sm font-mono"
-                      rows={6}
-                      placeholder="Enter default code template for students..."
-                    />
-                  </div>
-
-                  {/* Additional Options */}
-                  <div className="flex gap-4">
-                    <label className="flex items-center text-sm">
-                      <input 
-                        type="checkbox" 
-                        checked={form.codeEditor.allowExecution} 
-                        onChange={e => setForm({...form, codeEditor: {...form.codeEditor, allowExecution: e.target.checked}})}
-                        className="mr-2"
-                      />
-                      Allow Code Execution
-                    </label>
-                    <label className="flex items-center text-sm">
-                      <input 
-                        type="checkbox" 
-                        checked={form.codeEditor.showThemes} 
-                        onChange={e => setForm({...form, codeEditor: {...form.codeEditor, showThemes: e.target.checked}})}
-                        className="mr-2"
-                      />
-                      Show Theme Options
-                    </label>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
