@@ -34,9 +34,10 @@ function CourseWrapper({ children }: { children: (course: any) => React.ReactNod
     const findCourse = async () => {
       setLoading(true);
       
-      // First try to find in context courses
+      // First try to find in context courses by various IDs and slug patterns
       let foundCourse = courses.find(c => 
         c.id === courseSlug || 
+        (c as any)._id === courseSlug ||
         c.title.toLowerCase().replace(/[^a-z0-9]/g, '-') === courseSlug
       );
 
@@ -49,14 +50,14 @@ function CourseWrapper({ children }: { children: (course: any) => React.ReactNod
             headers.Authorization = `Bearer ${token}`;
           }
 
-          // Try by slug first
-          let response = await fetch(`http://localhost:5001/api/courses/slug/${courseSlug}`, {
+          // Try by courseSlug (could be MongoDB ObjectId or slug)
+          let response = await fetch(`http://localhost:5001/api/courses/${courseSlug}`, {
             headers
           });
 
+          // If that fails, try the slug endpoint
           if (!response.ok) {
-            // Fallback: try by ID
-            response = await fetch(`http://localhost:5001/api/courses/${courseSlug}`, {
+            response = await fetch(`http://localhost:5001/api/courses/slug/${courseSlug}`, {
               headers
             });
           }
@@ -102,7 +103,7 @@ function AppContent() {
 
   // Helper function to generate course slug
   const getCourseSlug = (course: any) => {
-    return course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    return (course._id || course.id) || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
   };
 
   if (loading) {

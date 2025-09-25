@@ -104,6 +104,7 @@ app.set('trust proxy', 1);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
 app.use('/api/videos', require('./routes/videos'));
 // app.use('/api/video-stream', require('./routes/video-stream')); // Commented out - route doesn't exist
 app.use('/api/courses', require('./routes/courses'));

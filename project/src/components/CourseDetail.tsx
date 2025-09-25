@@ -88,8 +88,33 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         const status = await paymentService.getPaymentStatus(courseId);
         setPaymentStatus(status);
         
+        // Auto-enroll user in free courses if not already enrolled
+        if (status.isFree && !status.isEnrolled) {
+          console.log('Auto-enrolling user in free course...');
+          try {
+            const enrollResponse = await fetch(`http://localhost:5001/api/courses/${courseId}/enroll`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (enrollResponse.ok) {
+              console.log('Successfully auto-enrolled in free course');
+              // Update the status to reflect enrollment
+              status.isEnrolled = true;
+              status.canAccess = true;
+            } else {
+              console.error('Failed to auto-enroll in free course');
+            }
+          } catch (enrollError) {
+            console.error('Error auto-enrolling in free course:', enrollError);
+          }
+        }
+
         // Determine if user has access
-        const hasAccess = status.isFree || status.hasPaid;
+        const hasAccess = status.canAccess || (status.isFree && status.isEnrolled);
         setHasAccess(hasAccess);
 
         // Only check completion status if user has access
@@ -125,7 +150,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         console.error('Error checking course access:', error);
         // SECURITY: On error, default to NO access for paid courses
         // Only allow access if it's clearly a free course (price = 0)
-        const isFreeFromPricing = course.price === 0;
+        const isFreeFromPricing = (course.price || 0) === 0;
         setHasAccess(isFreeFromPricing);
         setPaymentStatus({ 
           isFree: isFreeFromPricing, 
@@ -382,8 +407,8 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <img
-              src={course.thumbnail}
-              alt={course.title}
+              src={course.thumbnail || 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1200'}
+              alt={course.title || 'Course'}
               className="w-full h-64 object-cover"
             />
             
@@ -394,20 +419,20 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                   course.level === 'Intermediate' ? 'bg-persimmon/20 text-persimmon' :
                   'bg-cyber-grape/20 text-cyber-grape'
                 }`}>
-                  {course.level}
+                  {course.level || 'Beginner'}
                 </span>
                 <div className="flex items-center space-x-4">
-                  {course.price > 0 && (
+                  {(course.price || 0) > 0 && (
                     <div className="text-right">
                       <div className="text-2xl font-bold text-dark-gunmetal">
-                        {paymentService.formatCurrency(course.price)}
+                        {paymentService.formatCurrency(course.price || 0)}
                       </div>
                       {paymentStatus?.hasPaid && (
                         <div className="text-sm text-caribbean-green font-medium">Purchased</div>
                       )}
                     </div>
                   )}
-                  {course.price === 0 && (
+                  {(course.price || 0) === 0 && (
                     <div className="px-3 py-1 bg-caribbean-green/20 text-caribbean-green rounded-full text-sm font-semibold">
                       Free
                     </div>
@@ -422,11 +447,11 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               </div>
 
               <h1 className="text-3xl font-bold text-dark-gunmetal mb-4">
-                {course.title}
+                {course.title || 'Course Title'}
               </h1>
 
               <p className="text-dark-gunmetal/70 mb-6 leading-relaxed">
-                {course.description}
+                {course.description || 'Course description not available'}
               </p>
 
 
@@ -434,15 +459,15 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               <div className="flex flex-wrap items-center gap-6 text-sm text-dark-gunmetal/70 mb-6">
                 <div className="flex items-center space-x-2">
                   <Clock className="w-4 h-4" />
-                  <span>{course.duration}</span>
+                  <span>{course.duration || 'N/A'}</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4" />
-                  <span>{course.students.toLocaleString()} students</span>
+                  <span>{course.students?.toLocaleString() || '0'} students</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Star className="w-4 h-4 fill-persimmon text-persimmon" />
-                  <span>{course.rating} rating</span>
+                  <span>{course.rating || 'N/A'} rating</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Award className="w-4 h-4" />
@@ -521,7 +546,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-dark-gunmetal mb-3">Skills You'll Learn</h3>
                 <div className="flex flex-wrap gap-2">
-                  {course.skills.map((skill: string) => (
+                  {(course.skills || []).map((skill: string) => (
                     <span
                       key={skill}
                       className="px-3 py-1 bg-cyber-grape/10 text-cyber-grape text-sm rounded-lg font-medium"
@@ -623,9 +648,9 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
             </h3>
             
             <div className="space-y-3">
-              {course.lessons.map((lesson: any, index: number) => {
+              {lessons.map((lesson: any, index: number) => {
                 const lessonId = (lesson as any)._id || lesson.id;
-                const prevLesson = index > 0 ? course.lessons[index - 1] : null;
+                const prevLesson = index > 0 ? lessons[index - 1] : null;
                 const prevLessonId = prevLesson ? ((prevLesson as any)._id || prevLesson.id) : null;
                 const isLessonCompleted = lessonProgress[lessonId];
                 const isFirstLesson = index === 0;

@@ -3,23 +3,25 @@ import { Calendar, Clock, Target, Brain, Zap, BookOpen, CheckCircle, AlertCircle
 import { useAuth } from '../contexts/AuthContext';
 import { fetchWithAuth } from '../services/apiService';
 
-interface StudyPlannerProps {
-  courseId?: string;
-  className?: string;
-}
-
 interface StudySession {
   id: string;
   courseId: string;
   courseTitle: string;
   topic: string;
-  duration: number; // in minutes
-  scheduledTime: Date;
+  duration: number; // minutes
+  scheduledTime: Date | string; // Can be Date object or ISO string from API
   type: 'video' | 'practice' | 'review' | 'assessment';
   difficulty: 'easy' | 'medium' | 'hard';
   completed: boolean;
-  priority: number; // 1-5
+  priority: number;
 }
+
+interface StudyPlannerProps {
+  courseId?: string;
+  className?: string;
+}
+
+
 
 interface StudyGoal {
   id: string;
@@ -291,7 +293,7 @@ const SmartStudyPlanner: React.FC<StudyPlannerProps> = ({ courseId, className = 
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-xs text-gray-500">
-                    {session.scheduledTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(session.scheduledTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                   {!session.completed && (
                     <button

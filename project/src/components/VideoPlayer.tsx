@@ -90,6 +90,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     userObject: user,
     lessonId,
     courseId,
+    lesson,
     progressKey: `progress_${userId}_${courseId}`
   });
 
@@ -124,6 +125,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Some videos might have credits or blank endings, so 95% is a good threshold
       if (duration > 0 && newWatchedTime >= (duration * 0.95) && !isCompleted) {
         console.log(`Video ${lessonId} marked as completed at ${newWatchedTime}/${duration} seconds`);
+        console.log(`Calling updateLessonProgress with courseId: ${courseId}, lessonId: ${lessonId}, userId: ${userId}`);
         setIsCompleted(true);
         setShowCompletion(true);
         updateLessonProgress(courseId, lessonId, userId || '');
