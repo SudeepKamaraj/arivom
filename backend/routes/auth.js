@@ -99,8 +99,8 @@ router.post('/register', async (req, res) => {
     // Last name validation
     if (!lastName || !lastName.trim()) {
       validationErrors.push('Last name is required');
-    } else if (lastName.trim().length < 2) {
-      validationErrors.push('Last name must be at least 2 characters');
+    } else if (lastName.trim().length < 1) {
+      validationErrors.push('Last name must be at least 1 characters');
     } else if (lastName.trim().length > 50) {
       validationErrors.push('Last name must be less than 50 characters');
     } else if (!/^[a-zA-Z\s]+$/.test(lastName.trim())) {

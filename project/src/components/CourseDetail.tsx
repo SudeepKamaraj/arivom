@@ -2,11 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
-import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign, Brain, Calendar } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Star, Award, Play, CheckCircle, Lock, CreditCard, DollarSign } from 'lucide-react';
 import ReviewSection from './ReviewSection';
 import PaymentModal from './PaymentModal';
-import LearningCompanion from './LearningCompanion';
-import SmartStudyPlanner from './SmartStudyPlanner';
+
+
 import paymentService from '../services/paymentService';
 
 interface CourseDetailProps {
@@ -467,7 +467,14 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   <Star className="w-4 h-4 fill-persimmon text-persimmon" />
-                  <span>{course.rating || 'N/A'} rating</span>
+                  <span>
+                    {typeof course.rating === 'object' && course.rating?.count > 0 
+                      ? `${course.rating.average.toFixed(1)}/5 (${course.rating.count} review${course.rating.count !== 1 ? 's' : ''})`
+                      : typeof course.rating === 'number' && course.rating > 0
+                      ? `${course.rating.toFixed(1)}/5`
+                      : 'No ratings yet'
+                    }
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Award className="w-4 h-4" />
@@ -644,7 +651,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
           {/* Curriculum */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-dark-gunmetal mb-4">
-              Course Content ({course.lessons.length} lessons)
+              Course Content ({lessons.length} lessons)
             </h3>
             
             <div className="space-y-3">
@@ -759,20 +766,7 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         </div>
       </div>
 
-      {/* Unique Features Row */}
-      <div className="mt-8 grid grid-cols-1 xl:grid-cols-2 gap-8">
-        {/* AI Learning Companion */}
-        <LearningCompanion 
-          courseId={(course as any)._id || course.id}
-          className="h-fit"
-        />
-        
-        {/* Smart Study Planner */}
-        <SmartStudyPlanner 
-          courseId={(course as any)._id || course.id}
-          className="h-fit"
-        />
-      </div>
+
 
       {/* Reviews Section */}
       <div className="mt-8">

@@ -111,7 +111,12 @@ const AllCourses: React.FC<AllCoursesProps> = ({ onCourseSelect }) => {
           </div>
           <div className="flex items-center space-x-1">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span>{course.rating}</span>
+            <span>
+              {!course.rating || course.rating.count === 0 
+                ? 'No ratings yet' 
+                : `${course.rating.average}/5 (${course.rating.count})`
+              }
+            </span>
           </div>
         </div>
         

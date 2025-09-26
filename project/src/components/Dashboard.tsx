@@ -18,6 +18,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
   const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
   const [paymentStatuses, setPaymentStatuses] = useState<{ [courseId: string]: any }>({});
 
+  // Helper function to display rating properly
+  const formatRating = (rating: any) => {
+    if (!rating || (typeof rating === 'object' && rating.count === 0)) {
+      return 'No ratings yet';
+    }
+    if (typeof rating === 'object' && rating.average) {
+      return `${rating.average}/5 (${rating.count})`;
+    }
+    return typeof rating === 'number' ? `${rating}/5` : 'No ratings yet';
+  };
+
   // Filter courses based on search term
   useEffect(() => {
     if (searchTerm.trim() === '') {
@@ -362,7 +373,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <Star className="w-4 h-4 text-persimmon fill-current" />
-                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{formatRating(course.rating)}</span>
                           </div>
                           <button className="flex items-center space-x-2 px-4 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg transition-colors">
                             <Play className="w-4 h-4" />
@@ -391,7 +402,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <Star className="w-4 h-4 text-persimmon fill-current" />
-                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{formatRating(course.rating)}</span>
                           </div>
                           <button className="flex items-center space-x-2 px-4 py-2 bg-caribbean-green hover:bg-caribbean-green-dark text-white rounded-lg transition-colors">
                             <ArrowRight className="w-4 h-4" />
@@ -438,7 +449,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <Star className="w-4 h-4 text-persimmon fill-current" />
-                          <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                          <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{formatRating(course.rating)}</span>
                         </div>
                         <button className="flex items-center space-x-2 px-4 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg transition-colors">
                           <Play className="w-4 h-4" />
@@ -484,7 +495,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <Star className="w-4 h-4 text-persimmon fill-current" />
-                          <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                          <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{formatRating(course.rating)}</span>
                         </div>
                         <button 
                           onClick={(e) => {
@@ -561,7 +572,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <Star className="w-4 h-4 text-persimmon fill-current" />
-                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                            <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{formatRating(course.rating)}</span>
                           </div>
                           <button className="flex items-center space-x-2 px-4 py-2 bg-cyber-grape hover:bg-cyber-grape-dark text-white rounded-lg transition-colors">
                             {course.progress > 0 ? (
@@ -617,7 +628,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onCourseSelect, onViewCertificate
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <Star className="w-4 h-4 text-persimmon fill-current" />
-                        <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{course.rating}</span>
+                        <span className="text-sm text-dark-gunmetal/70 dark:text-gray-300">{formatRating(course.rating)}</span>
                       </div>
                       <button className="flex items-center space-x-2 px-4 py-2 bg-caribbean-green hover:bg-caribbean-green-dark text-white rounded-lg transition-colors">
                         <ArrowRight className="w-4 h-4" />

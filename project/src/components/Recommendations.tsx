@@ -28,19 +28,38 @@ const Recommendations: React.FC<RecommendationsProps> = ({ onCourseSelect }) => 
   }
 
   // Simplified recommendations based on course popularity and level
+  const getRatingValue = (rating: any) => {
+    if (typeof rating === 'object' && rating?.average) {
+      return rating.average;
+    }
+    return typeof rating === 'number' ? rating : 0;
+  };
+
   const recommendedCourses = courses
-    .sort((a, b) => (b.rating * b.students) - (a.rating * a.students))
+    .sort((a, b) => {
+      const aRating = getRatingValue(a.rating);
+      const bRating = getRatingValue(b.rating);
+      return (bRating * b.students) - (aRating * a.students);
+    })
     .slice(0, 6);
 
   const skillBasedCourses = courses
     .filter(course => user.skills && user.skills.length > 0 && 
       course.skills.some(skill => user.skills.includes(skill)))
-    .sort((a, b) => b.rating - a.rating)
+    .sort((a, b) => {
+      const aRating = getRatingValue(a.rating);
+      const bRating = getRatingValue(b.rating);
+      return bRating - aRating;
+    })
     .slice(0, 6);
 
   const beginnerCourses = courses
     .filter(course => course.level === 'Beginner')
-    .sort((a, b) => b.rating - a.rating)
+    .sort((a, b) => {
+      const aRating = getRatingValue(a.rating);
+      const bRating = getRatingValue(b.rating);
+      return bRating - aRating;
+    })
     .slice(0, 6);
 
   const trendingCourses = courses
@@ -94,7 +113,12 @@ const Recommendations: React.FC<RecommendationsProps> = ({ onCourseSelect }) => 
           </div>
           <div className="flex items-center space-x-1">
             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-            <span>{course.rating}</span>
+            <span>
+              {!course.rating || course.rating.count === 0 
+                ? 'No ratings yet' 
+                : `${course.rating.average}/5 (${course.rating.count})`
+              }
+            </span>
           </div>
         </div>
         

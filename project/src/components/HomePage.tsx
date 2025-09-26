@@ -87,7 +87,12 @@ const HomePage: React.FC<HomePageProps> = ({ onCourseSelect }) => {
           </div>
           <div className="flex items-center space-x-1">
             <Star className="w-4 h-4 fill-persimmon text-persimmon" />
-            <span>{course.rating}</span>
+            <span>
+              {!course.rating || course.rating.count === 0 
+                ? 'No ratings yet' 
+                : `${course.rating.average}/5 (${course.rating.count})`
+              }
+            </span>
           </div>
         </div>
         

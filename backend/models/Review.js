@@ -180,26 +180,23 @@ reviewSchema.methods.markHelpful = async function(userId) {
   return await this.save();
 };
 
-// Pre-save middleware to update course rating
-reviewSchema.pre('save', async function(next) {
-  if (this.isNew || this.isModified('rating')) {
-    try {
-      const Course = mongoose.model('Course');
-      const ratingData = await this.constructor.calculateCourseRating(this.course);
-      
-      await Course.findByIdAndUpdate(this.course, {
-        'rating.average': ratingData.average,
-        'rating.count': ratingData.count
-      });
-    } catch (error) {
-      console.error('Error updating course rating:', error);
-    }
+// Post-save middleware to update course rating
+reviewSchema.post('save', async function() {
+  try {
+    const Course = mongoose.model('Course');
+    const ratingData = await this.constructor.calculateCourseRating(this.course);
+    
+    await Course.findByIdAndUpdate(this.course, {
+      'rating.average': ratingData.average,
+      'rating.count': ratingData.count
+    });
+  } catch (error) {
+    console.error('Error updating course rating:', error);
   }
-  next();
 });
 
-// Pre-remove middleware to update course rating when review is deleted
-reviewSchema.pre('remove', async function(next) {
+// Post-remove middleware to update course rating when review is deleted
+reviewSchema.post('remove', async function() {
   try {
     const Course = mongoose.model('Course');
     const ratingData = await this.constructor.calculateCourseRating(this.course);
@@ -211,7 +208,24 @@ reviewSchema.pre('remove', async function(next) {
   } catch (error) {
     console.error('Error updating course rating after review deletion:', error);
   }
-  next();
+});
+
+// Post-findOneAndDelete middleware to update course rating when review is deleted via findByIdAndDelete
+reviewSchema.post('findOneAndDelete', async function(doc) {
+  if (doc) {
+    try {
+      const Course = mongoose.model('Course');
+      const Review = mongoose.model('Review');
+      const ratingData = await Review.calculateCourseRating(doc.course);
+      
+      await Course.findByIdAndUpdate(doc.course, {
+        'rating.average': ratingData.average,
+        'rating.count': ratingData.count
+      });
+    } catch (error) {
+      console.error('Error updating course rating after review deletion:', error);
+    }
+  }
 });
 
 module.exports = mongoose.model('Review', reviewSchema);

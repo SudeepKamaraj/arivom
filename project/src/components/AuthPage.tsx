@@ -78,7 +78,7 @@ const AuthPage: React.FC = () => {
       
       case 'lastName':
         if (!value.trim()) return 'Last name is required';
-        if (value.trim().length < 2) return 'Last name must be at least 2 characters';
+        if (value.trim().length < 1) return 'Last name must be at least 1 characters';
         if (value.trim().length > 50) return 'Last name must be less than 50 characters';
         if (!/^[a-zA-Z\s]+$/.test(value.trim())) return 'Last name can only contain letters';
         return '';

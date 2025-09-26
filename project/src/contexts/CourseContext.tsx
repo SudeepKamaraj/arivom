@@ -21,7 +21,10 @@ export interface Course {
   price: number;
   duration: string; // e.g., '8h 30m'
   students: number;
-  rating: number; // 0-5
+  rating: {
+    average: number;
+    count: number;
+  } | number; // Support both old and new format
   skills: string[];
   instructor: string;
   thumbnail: string;
@@ -387,7 +390,7 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             price: c.price ?? 0,
             duration: typeof c.duration === 'number' ? `${Math.max(1, Math.round(c.duration/60))}h` : (c.duration || '6h'),
             students: c.rating?.count || 0,
-            rating: c.rating?.average || 4.7,
+            rating: c.rating || { average: 0, count: 0 },
             skills: c.tags || [],
             instructor: typeof c.instructor === 'string' ? c.instructor : (c.instructor?.firstName ? `${c.instructor.firstName} ${c.instructor.lastName}` : 'Instructor'),
             thumbnail: c.thumbnail || 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1200',

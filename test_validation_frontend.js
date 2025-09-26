@@ -42,7 +42,7 @@ function validateField(name, value, formData = {}) {
     
     case 'lastName':
       if (!value || !value.trim()) return 'Last name is required';
-      if (value.trim().length < 2) return 'Last name must be at least 2 characters';
+      if (value.trim().length < 1) return 'Last name must be at least 1 characters';
       if (value.trim().length > 50) return 'Last name must be less than 50 characters';
       if (!/^[a-zA-Z\s]+$/.test(value.trim())) return 'Last name can only contain letters';
       return '';
@@ -93,7 +93,7 @@ function runValidationTests() {
 
     // Last name tests
     { field: 'lastName', value: '', expected: 'Last name is required' },
-    { field: 'lastName', value: 'D', expected: 'Last name must be at least 2 characters' },
+    { field: 'lastName', value: '', expected: 'Last name must be at least 1 characters' },
     { field: 'lastName', value: 'a'.repeat(51), expected: 'Last name must be less than 50 characters' },
     { field: 'lastName', value: 'Doe123', expected: 'Last name can only contain letters' },
     { field: 'lastName', value: 'Doe', expected: '' }
