@@ -134,6 +134,27 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  // OTP related fields
+  otpCode: {
+    type: String
+  },
+  otpExpiresAt: {
+    type: Date
+  },
+  // Skills and interests selection flag
+  skillsSelected: {
+    type: Boolean,
+    default: false
+  },
+  experienceLevel: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+    default: 'Beginner'
+  },
+  completedCourses: {
+    type: [String],
+    default: []
   }
 }, {
   timestamps: true

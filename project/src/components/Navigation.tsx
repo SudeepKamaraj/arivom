@@ -69,38 +69,38 @@ const Navigation: React.FC = () => {
             <div className="ml-10 flex items-baseline space-x-4">
               <Link
                 to="/"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 Home
               </Link>
               <Link
                 to="/all-courses"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/all-courses' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/all-courses' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 Courses
               </Link>
               <Link
                 to="/dashboard"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/dashboard' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/dashboard' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 Dashboard
               </Link>
               <Link
                 to="/recommendations"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/recommendations' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/recommendations' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 Recommendations
               </Link>
               <Link
                 to="/achievements"
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/achievements' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/achievements' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 Achievements
               </Link>
               {(user?.role === 'admin' || user?.role === 'instructor') && (
                 <Link
                   to="/admin-courses"
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/admin-courses' ? 'text-cyber-grape' : 'text-dark-gunmetal dark:text-gray-200 hover:text-cyber-grape'}`}
+                  className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${location.pathname === '/admin-courses' ? 'text-red-600 bg-red-50 dark:bg-red-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                 >
                   Admin
                 </Link>
@@ -119,11 +119,11 @@ const Navigation: React.FC = () => {
                 value={navSearch}
                 onChange={(e) => setNavSearch(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleNavSearchSubmit(); }}
-                className="pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-dark-gunmetal dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyber-grape focus:border-transparent text-sm"
+                className="pl-10 pr-20 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
               <button
                 onClick={handleNavSearchSubmit}
-                className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 text-xs bg-cyber-grape text-white rounded-md hover:bg-cyber-grape-dark"
+                className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
               >
                 Search
               </button>
@@ -131,10 +131,10 @@ const Navigation: React.FC = () => {
 
             {/* Notifications */}
             <div className="relative">
-              <button onClick={toggleNotifications} className="p-2 text-gray-400 hover:text-gray-600 transition-colors relative">
+              <button onClick={toggleNotifications} className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors relative">
                 <Bell className="h-5 w-5" />
                 {notifications.some(n => !n.read) && (
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-persimmon"></span>
+                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400"></span>
                 )}
               </button>
               {isNotificationsOpen && (
@@ -169,14 +169,14 @@ const Navigation: React.FC = () => {
                   onClick={toggleProfileDropdown}
                   onMouseEnter={() => setIsProfileHovered(true)}
                   onMouseLeave={() => setIsProfileHovered(false)}
-                  className="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 hover:bg-gray-50 dark:hover:bg-gray-800 px-2 py-1 rounded-lg transition-all duration-200"
+                  className="flex items-center space-x-2 text-sm bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-600 transition-colors"
                 >
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center hover:bg-blue-700 hover:scale-105 transition-all duration-200 cursor-pointer">
+                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-semibold text-sm">
                       {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                     </span>
                   </div>
-                  <span className="text-gray-700 dark:text-gray-200 font-medium hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200 cursor-pointer">
+                  <span className="text-gray-700 dark:text-gray-200 font-medium">
                     {user.firstName}
                   </span>
                 </button>
@@ -348,7 +348,7 @@ const Navigation: React.FC = () => {
               <div className="flex items-center space-x-4">
                 <Link
                   to="/auth"
-                  className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Sign In
                 </Link>
@@ -366,7 +366,7 @@ const Navigation: React.FC = () => {
           <div className="md:hidden">
             <button
               onClick={toggleMenu}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             >
               {isMenuOpen ? (
                 <X className="block h-6 w-6" />
@@ -381,42 +381,52 @@ const Navigation: React.FC = () => {
       {/* Mobile Navigation */}
       {isMenuOpen && (
         <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t border-gray-200">
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
             <Link
               to="/"
               onClick={() => setIsMenuOpen(false)}
-              className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               Home
             </Link>
             <Link
               to="/all-courses"
               onClick={() => setIsMenuOpen(false)}
-              className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/all-courses' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               Courses
             </Link>
             <Link
               to="/dashboard"
               onClick={() => setIsMenuOpen(false)}
-              className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/dashboard' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               Dashboard
             </Link>
             <Link
               to="/recommendations"
               onClick={() => setIsMenuOpen(false)}
-              className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/recommendations' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               Recommendations
             </Link>
             <Link
               to="/achievements"
               onClick={() => setIsMenuOpen(false)}
-              className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+              className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/achievements' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
             >
               Achievements
             </Link>
+
+            {(user?.role === 'admin' || user?.role === 'instructor') && (
+              <Link
+                to="/admin-courses"
+                onClick={() => setIsMenuOpen(false)}
+                className={`block px-3 py-2 rounded-md text-base font-medium ${location.pathname === '/admin-courses' ? 'text-red-600 bg-red-50 dark:bg-red-900/20' : 'text-gray-700 dark:text-gray-200 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+              >
+                Admin
+              </Link>
+            )}
             
             {user && (
               <>
@@ -424,24 +434,46 @@ const Navigation: React.FC = () => {
                 <Link
                   to="/profile"
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
+                  <User className="h-4 w-4 mr-2" />
                   Profile
                 </Link>
                 <Link
                   to="/settings"
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-left w-full text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
+                  className="flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-blue-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
+                  <Settings className="h-4 w-4 mr-2" />
                   Settings
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="text-gray-900 hover:text-blue-600 block w-full text-left px-3 py-2 rounded-md text-base font-medium"
+                  className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-200 hover:text-red-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
+                  <LogOut className="h-4 w-4 mr-2" />
                   Logout
                 </button>
               </>
+            )}
+
+            {!user && (
+              <div className="mt-4 space-y-2">
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block w-full text-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-md hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block w-full text-center px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700"
+                >
+                  Get Started
+                </Link>
+              </div>
             )}
           </div>
         </div>

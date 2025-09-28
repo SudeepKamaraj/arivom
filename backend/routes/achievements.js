@@ -60,10 +60,31 @@ router.put('/:id', auth, achievementController.updateAchievement);
 router.post('/award-xp', auth, achievementController.awardXP);
 
 /**
+ * @route   GET /api/achievements/chains
+ * @desc    Get achievement chains
+ * @access  Public (with optional user context)
+ */
+router.get('/chains', achievementController.getAchievementChains);
+
+/**
+ * @route   GET /api/achievements/stats
+ * @desc    Get achievement statistics
+ * @access  Public (with optional user context)
+ */
+router.get('/stats', achievementController.getAchievementStats);
+
+/**
  * @route   POST /api/achievements/check
  * @desc    Check for achievements based on user action
  * @access  Private
  */
 router.post('/check', auth, achievementController.checkAchievements);
+
+/**
+ * @route   POST /api/achievements/progress
+ * @desc    Update achievement progress manually
+ * @access  Admin only
+ */
+router.post('/progress', auth, achievementController.updateProgress);
 
 module.exports = router;

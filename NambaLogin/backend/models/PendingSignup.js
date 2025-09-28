@@ -1,0 +1,13 @@
+const mongoose = require('mongoose');
+
+const pendingSignupSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  lastName: { type: String },
+  phone: { type: String },
+  password: { type: String, required: true },
+  otp: { type: String, required: true },
+  expires: { type: Date, required: true }
+}, { timestamps: true });
+
+module.exports = mongoose.model('PendingSignup', pendingSignupSchema);

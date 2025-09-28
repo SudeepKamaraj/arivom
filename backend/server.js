@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path');
@@ -104,7 +104,9 @@ app.set('trust proxy', 1);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', require('./routes/authOTP')); // OTP authentication routes
 app.use('/api/users', require('./routes/users'));
+app.use('/api/users/profile', require('./routes/userProfile')); // User profile management
 app.use('/api/videos', require('./routes/videos'));
 // app.use('/api/video-stream', require('./routes/video-stream')); // Commented out - route doesn't exist
 app.use('/api/courses', require('./routes/courses'));
@@ -118,6 +120,7 @@ app.use('/api/debug', require('./routes/debug'));
 app.use('/api/learning', require('./routes/learning'));
 app.use('/api/peers', require('./routes/peers'));
 app.use('/api/career', require('./routes/career'));
+app.use('/api/recommendations', require('./routes/recommendations'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

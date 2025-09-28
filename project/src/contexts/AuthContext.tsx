@@ -71,7 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        // Handle both direct user object and nested user object
+        const user = userData.user || userData;
+        setUser(user);
         localStorage.setItem('authToken', token);
       } else {
         // Token is invalid, remove it

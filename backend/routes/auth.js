@@ -292,7 +292,9 @@ router.post('/logout', auth, logActivity, (req, res) => {
 // Get current user profile
 router.get('/profile', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-password');
+    // req.user is already the full user object from auth middleware
+    const userId = req.user._id || req.user.id;
+    const user = await User.findById(userId).select('-password -otpCode -otpExpiresAt');
     res.json(user);
   } catch (error) {
     console.error('Profile fetch error:', error);

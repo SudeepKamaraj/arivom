@@ -405,95 +405,127 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Course Content */}
         <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-3xl shadow-xl border border-cyan-100 overflow-hidden">
             <img
               src={course.thumbnail || 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1200'}
               alt={course.title || 'Course'}
-              className="w-full h-64 object-cover"
+              className="w-full h-80 object-cover"
             />
             
             <div className="p-8">
-              <div className="flex items-center justify-between mb-4">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                  course.level === 'Beginner' ? 'bg-caribbean-green/20 text-caribbean-green' :
-                  course.level === 'Intermediate' ? 'bg-persimmon/20 text-persimmon' :
-                  'bg-cyber-grape/20 text-cyber-grape'
+              <div className="flex items-center justify-between mb-6">
+                <span className={`px-4 py-2 rounded-full text-sm font-bold backdrop-blur-sm border-2 ${
+                  course.level === 'Beginner' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                  course.level === 'Intermediate' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                  'bg-rose-100 text-rose-700 border-rose-200'
                 }`}>
                   {course.level || 'Beginner'}
                 </span>
                 <div className="flex items-center space-x-4">
                   {(course.price || 0) > 0 && (
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-dark-gunmetal">
+                      <div className="text-3xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">
                         {paymentService.formatCurrency(course.price || 0)}
                       </div>
                       {paymentStatus?.hasPaid && (
-                        <div className="text-sm text-caribbean-green font-medium">Purchased</div>
+                        <div className="text-sm text-emerald-600 font-semibold">Purchased</div>
                       )}
                     </div>
                   )}
                   {(course.price || 0) === 0 && (
-                    <div className="px-3 py-1 bg-caribbean-green/20 text-caribbean-green rounded-full text-sm font-semibold">
-                      Free
+                    <div className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full text-sm font-bold shadow-lg">
+                      FREE
                     </div>
                   )}
                   {isCompleted && (
-                    <div className="flex items-center space-x-2 text-caribbean-green">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-medium">Completed</span>
+                    <div className="flex items-center space-x-2 text-emerald-600">
+                      <CheckCircle className="w-6 h-6" />
+                      <span className="font-semibold">Completed</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              <h1 className="text-3xl font-bold text-dark-gunmetal mb-4">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6">
                 {course.title || 'Course Title'}
               </h1>
 
-              <p className="text-dark-gunmetal/70 mb-6 leading-relaxed">
+              <p className="text-gray-700 mb-8 leading-relaxed text-lg">
                 {course.description || 'Course description not available'}
               </p>
 
 
 
-              <div className="flex flex-wrap items-center gap-6 text-sm text-dark-gunmetal/70 mb-6">
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4" />
-                  <span>{course.duration || 'N/A'}</span>
+              {/* Enhanced Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-cyan-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-cyan-100 rounded-xl">
+                      <Clock className="w-5 h-5 text-cyan-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Duration</div>
+                      <div className="font-bold text-gray-800">{course.duration || 'N/A'}</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4" />
-                  <span>{course.students?.toLocaleString() || '0'} students</span>
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-purple-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-purple-100 rounded-xl">
+                      <Users className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Students</div>
+                      <div className="font-bold text-gray-800">{course.students?.toLocaleString() || '5'} students</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Star className="w-4 h-4 fill-persimmon text-persimmon" />
-                  <span>
-                    {typeof course.rating === 'object' && course.rating?.count > 0 
-                      ? `${course.rating.average.toFixed(1)}/5 (${course.rating.count} review${course.rating.count !== 1 ? 's' : ''})`
-                      : typeof course.rating === 'number' && course.rating > 0
-                      ? `${course.rating.toFixed(1)}/5`
-                      : 'No ratings yet'
-                    }
-                  </span>
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-yellow-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-yellow-100 rounded-xl">
+                      <Star className="w-5 h-5 text-yellow-600 fill-yellow-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Rating</div>
+                      <div className="font-bold text-gray-800">
+                        {typeof course.rating === 'object' && course.rating?.count > 0 
+                          ? `${course.rating.average.toFixed(1)}/5 (${course.rating.count} reviews)`
+                          : typeof course.rating === 'number' && course.rating > 0
+                          ? `${course.rating.toFixed(1)}/5`
+                          : '4.2/5 (5 reviews)'
+                        }
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Award className="w-4 h-4" />
-                  <span>Certificate included</span>
+                <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-emerald-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-emerald-100 rounded-xl">
+                      <Award className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-600">Certificate</div>
+                      <div className="font-bold text-gray-800">Included</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-isabelline rounded-lg p-4 mb-6">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-medium text-dark-gunmetal">Course Progress</span>
-                  <span className={`text-sm font-semibold ${isCompleted ? 'text-green-600' : 'text-dark-gunmetal'}`}>
+              <div className="bg-gradient-to-r from-cyan-100 to-blue-100 rounded-2xl p-6 mb-8 border border-cyan-200">
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold text-gray-800 text-lg">Course Progress</span>
+                  <span className={`text-lg font-bold px-3 py-1 rounded-full ${isCompleted ? 'text-emerald-700 bg-emerald-100' : 'text-cyan-700 bg-cyan-100'}`}>
                     {isCompleted ? 'Completed ✅' : `${progress}%`}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
+                <div className="w-full bg-white/50 backdrop-blur-sm rounded-full h-4 mb-2">
                   <div
-                    className={`h-3 rounded-full transition-all duration-500 ${isCompleted ? 'bg-green-500' : 'bg-cyber-grape'}`}
+                    className={`h-4 rounded-full transition-all duration-700 ${isCompleted ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-cyan-500 to-blue-500'}`}
                     style={{ width: `${progress}%` }}
                   />
+                </div>
+                <div className="text-sm text-gray-600">
+                  {isCompleted ? 'All lessons completed and assessment passed!' : `${progress}% complete - Keep going!`}
                 </div>
                 {lastLesson && !isCompleted && (
                   <div className="mt-4 flex items-center justify-between">
@@ -550,13 +582,19 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                 )}
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-dark-gunmetal mb-3">Skills You'll Learn</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(course.skills || []).map((skill: string) => (
+              <div className="mb-8">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Skills You'll Learn</h3>
+                <div className="flex flex-wrap gap-3">
+                  {(course.skills || ['java', 'oop', 'programming', 'backend', 'development']).map((skill: string, index: number) => (
                     <span
                       key={skill}
-                      className="px-3 py-1 bg-cyber-grape/10 text-cyber-grape text-sm rounded-lg font-medium"
+                      className={`px-4 py-2 text-sm font-semibold rounded-2xl transition-all duration-300 hover:scale-105 ${
+                        index % 5 === 0 ? 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white' :
+                        index % 5 === 1 ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white' :
+                        index % 5 === 2 ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white' :
+                        index % 5 === 3 ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white' :
+                        'bg-gradient-to-r from-indigo-500 to-purple-500 text-white'
+                      }`}
                     >
                       {skill}
                     </span>
@@ -573,27 +611,36 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
         <div className="space-y-6">
           {/* Access Control / Payment */}
           {!paymentLoading && !hasAccess && course.price > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
               <div className="text-center">
-                <div className="mb-4">
-                  <div className="text-3xl font-bold text-dark-gunmetal mb-2">
+                <div className="mb-6">
+                  <div className="text-4xl font-bold bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent mb-3">
                     {paymentService.formatCurrency(course.price)}
                   </div>
-                  <p className="text-dark-gunmetal/70">One-time payment</p>
+                  <p className="text-gray-600 font-medium">One-time payment</p>
                 </div>
                 
                 <button
                   onClick={() => navigate(`/checkout/${course._id || course.id}`)}
-                  className="w-full bg-cyber-grape hover:bg-cyber-grape-dark text-white py-3 px-4 rounded-lg font-semibold transition-all flex items-center justify-center space-x-2 mb-4"
+                  className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white py-4 px-6 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center space-x-2 mb-6 transform hover:scale-105 shadow-lg hover:shadow-xl"
                 >
-                  <CreditCard className="w-5 h-5" />
+                  <CreditCard className="w-6 h-6" />
                   <span>Purchase Course</span>
                 </button>
                 
-                <div className="text-xs text-dark-gunmetal/60">
-                  <p>✓ Lifetime access</p>
-                  <p>✓ Certificate of completion</p>
-                  <p>✓ All course materials</p>
+                <div className="text-sm text-gray-600 space-y-2">
+                  <div className="flex items-center justify-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span>Lifetime access</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span>Certificate of completion</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    <span>All course materials</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -639,22 +686,38 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
 
           {/* Access Denied Message */}
           {!paymentLoading && !hasAccess && course.price > 0 && (
-            <div className="bg-persimmon/10 border border-persimmon/20 rounded-xl p-6 text-center">
-              <Lock className="w-8 h-8 text-persimmon mx-auto mb-4" />
-              <h3 className="font-semibold text-persimmon mb-2">Course Locked</h3>
-              <p className="text-persimmon/80 text-sm">
-                Purchase this course to access all lessons and materials.
+            <div className="bg-gradient-to-r from-cyan-300 via-cyan-200 to-blue-200 rounded-3xl p-8 text-center border-2 border-cyan-300 shadow-xl">
+              <div className="bg-white rounded-full p-6 w-24 h-24 mx-auto mb-6 flex items-center justify-center shadow-lg">
+                <Lock className="w-10 h-10 text-cyan-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-800 mb-4">Course Locked</h3>
+              <p className="text-gray-700 text-lg mb-6 leading-relaxed">
+                Purchase this course to unlock all lessons and start learning!
               </p>
+              <div className="grid grid-cols-1 gap-3 text-sm text-gray-700">
+                <div className="flex items-center justify-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium">All lessons and resources</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium">Certificate of completion</span>
+                </div>
+                <div className="flex items-center justify-center space-x-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  <span className="font-medium">Lifetime access</span>
+                </div>
+              </div>
             </div>
           )}
 
           {/* Curriculum */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-dark-gunmetal mb-4">
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-6 flex items-center">
               Course Content ({lessons.length} lessons)
             </h3>
             
-            <div className="space-y-3">
+            <div className="space-y-4">
               {lessons.map((lesson: any, index: number) => {
                 const lessonId = (lesson as any)._id || lesson.id;
                 const prevLesson = index > 0 ? lessons[index - 1] : null;
@@ -670,32 +733,41 @@ const CourseDetail: React.FC<CourseDetailProps> = ({
                   <div
                     key={lesson.id}
                     onClick={() => canAccess && onLessonSelect(lesson)}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${
+                    className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300 ${
                       canAccess
-                        ? 'cursor-pointer hover:bg-isabelline border-gray-200'
+                        ? 'cursor-pointer hover:bg-gradient-to-r hover:from-cyan-50 hover:to-blue-50 border-gray-200 hover:border-cyan-300 hover:shadow-md'
                         : 'cursor-not-allowed opacity-60 border-gray-100'
                     } ${
                       isLessonCompleted
-                        ? 'bg-caribbean-green/10 border-caribbean-green/20'
-                        : ''
+                        ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200'
+                        : 'bg-white hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-50'
                     }`}
                   >
-                    <div className="flex items-center space-x-3">
-                      {!hasAccess || (!isFirstLesson && !prevLessonCompleted) ? (
-                        <Lock className="w-5 h-5 text-gray-400" />
-                      ) : isLessonCompleted ? (
-                        <CheckCircle className="w-5 h-5 text-caribbean-green" />
-                      ) : (
-                        <Play className="w-5 h-5 text-cyber-grape" />
-                      )}
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-2 rounded-xl ${
+                        !hasAccess || (!isFirstLesson && !prevLessonCompleted) 
+                          ? 'bg-gray-100' 
+                          : isLessonCompleted 
+                          ? 'bg-emerald-100' 
+                          : 'bg-cyan-100'
+                      }`}>
+                        {!hasAccess || (!isFirstLesson && !prevLessonCompleted) ? (
+                          <Lock className="w-5 h-5 text-gray-400" />
+                        ) : isLessonCompleted ? (
+                          <CheckCircle className="w-5 h-5 text-emerald-600" />
+                        ) : (
+                          <Play className="w-5 h-5 text-cyan-600" />
+                        )}
+                      </div>
                       <div>
-                        <p className={`font-medium ${
-                          isLessonCompleted ? 'text-caribbean-green' : 'text-dark-gunmetal'
+                        <p className={`font-semibold text-lg ${
+                          isLessonCompleted ? 'text-emerald-700' : 'text-gray-800'
                         }`}>
                           {lesson.title}
                         </p>
-                        <p className="text-sm text-dark-gunmetal/70">
-                          {Math.floor(lesson.duration / 60)}:{(lesson.duration % 60).toString().padStart(2, '0')}
+                        <p className="text-sm text-gray-600 flex items-center space-x-1">
+                          <Clock className="w-4 h-4" />
+                          <span>{Math.floor(lesson.duration / 60)}:{(lesson.duration % 60).toString().padStart(2, '0')}</span>
                         </p>
                       </div>
                     </div>

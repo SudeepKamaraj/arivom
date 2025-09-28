@@ -22,6 +22,7 @@ import CheckoutPage from './components/CheckoutPage';
 import PeerLearning from './components/PeerLearning';
 import CareerHub from './components/CareerHub';
 import InteractiveAssessments from './components/InteractiveAssessments';
+import AuthenticationFlow from './components/AuthenticationFlow';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -112,20 +113,36 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-isabelline dark:bg-gray-950">
-      {user && (
-        <Navigation />
-      )}
+      {user && <Navigation />}
       <main>
         <Routes>
+          {/* Home route - accessible for both authenticated and non-authenticated users */}
           <Route path="/" element={
-            <HomePage
+            <HomePage 
               onCourseSelect={(course) => {
-                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                navigate(`/courses/${courseSlug}`);
+                if (!user) {
+                  // Store selected course for post-auth redirect
+                  sessionStorage.setItem('selectedCourse', JSON.stringify(course));
+                  const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                  navigate(`/auth?redirect=/courses/${courseSlug}`);
+                } else {
+                  // For authenticated users, navigate directly to course
+                  const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                  navigate(`/courses/${courseSlug}`);
+                }
               }}
             />
           } />
-          <Route path="/dashboard" element={
+          <Route path="/auth" element={
+            user ? <Navigate to="/dashboard" replace /> : <AuthenticationFlow />
+          } />
+          
+          {/* Protected routes - require authentication */}
+          {!user ? (
+            <Route path="*" element={<Navigate to="/" replace />} />
+          ) : (
+            <>
+              <Route path="/dashboard" element={
             <Dashboard
               onCourseSelect={(course) => {
                 const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -258,7 +275,8 @@ function AppContent() {
               )}
             </CourseWrapper>
           } />
-          <Route path="*" element={<Navigate to="/" />} />
+            </>
+          )}
         </Routes>
       </main>
     </div>
