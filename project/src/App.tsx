@@ -23,6 +23,7 @@ import PeerLearning from './components/PeerLearning';
 import CareerHub from './components/CareerHub';
 import InteractiveAssessments from './components/InteractiveAssessments';
 import AuthenticationFlow from './components/AuthenticationFlow';
+import ChatBot from './components/ChatBot';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -279,6 +280,8 @@ function AppContent() {
           )}
         </Routes>
       </main>
+      {/* ChatBot - available on all pages */}
+      <ChatBot />
     </div>
   );
 }

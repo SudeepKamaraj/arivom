@@ -341,18 +341,7 @@ const AdminCourses: React.FC = () => {
                     <span className="hidden sm:inline font-medium">Logout</span>
                   </button>
                 </div>
-              ) : (
-                /* Login Button */
-                <button 
-                  onClick={() => {
-                    window.location.href = '/';
-                  }}
-                  className="flex items-center space-x-2 px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                >
-                  <User className="w-4 h-4" />
-                  <span className="font-medium">Login</span>
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
