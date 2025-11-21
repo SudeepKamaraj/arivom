@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCourses } from '../contexts/CourseContext';
 import { useNavigate } from 'react-router-dom';
-import { Users, Star, Clock, Search, Filter, ArrowRight, Play, Shield, BookOpen, Award, Target, Zap, TrendingUp, Globe, Heart, CheckCircle, Sparkles } from 'lucide-react';
+import { Users, Star, Clock, Search, Filter, ArrowRight, Play, Shield, BookOpen, Award, Target, Zap, TrendingUp, Globe, Heart, CheckCircle, Sparkles, Brain } from 'lucide-react';
+import RecommendationModal from './RecommendationModal';
 
 interface HomePageProps {
   onCourseSelect: (course: any) => void;
@@ -14,6 +15,7 @@ const HomePage: React.FC<HomePageProps> = ({ onCourseSelect }) => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [levelFilter, setLevelFilter] = useState('All');
+  const [showRecommendationModal, setShowRecommendationModal] = useState(false);
 
   const featuredCourses = courses.slice(0, 6);
   const filteredCourses = courses.filter(course => {
@@ -216,18 +218,18 @@ const HomePage: React.FC<HomePageProps> = ({ onCourseSelect }) => {
               {user ? (
                 <>
                   <button
-                    onClick={() => handleNavigate('dashboard')}
+                    onClick={() => setShowRecommendationModal(true)}
                     className="group bg-gradient-to-r from-blue-500 to-purple-600 text-white px-12 py-4 rounded-full text-xl font-semibold hover:from-blue-600 hover:to-purple-700 transform hover:scale-105 transition-all duration-300 shadow-2xl flex items-center justify-center space-x-3"
                   >
-                    <Play className="h-6 w-6 group-hover:animate-pulse" />
-                    <span>Continue Learning</span>
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                    <Brain className="h-6 w-6 group-hover:animate-pulse" />
+                    <span>Get Recommendations</span>
+                    <Sparkles className="w-6 h-6 group-hover:rotate-12 transition-transform" />
                   </button>
                   <button
-                    onClick={() => handleNavigate('recommendations')}
+                    onClick={() => handleNavigate('dashboard')}
                     className="bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-full text-lg font-semibold hover:bg-white/20 transition-all duration-300 border border-white/30"
                   >
-                    View Recommendations
+                    Go to Dashboard
                   </button>
                 </>
               ) : (
@@ -528,6 +530,13 @@ const HomePage: React.FC<HomePageProps> = ({ onCourseSelect }) => {
         </section>
       )}
 
+      {/* Recommendation Modal */}
+      <RecommendationModal
+        isOpen={showRecommendationModal}
+        onClose={() => setShowRecommendationModal(false)}
+        onCourseSelect={handleCourseSelect}
+        courses={courses}
+      />
     </div>
   );
 };

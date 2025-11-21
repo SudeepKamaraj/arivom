@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Mail, ArrowLeft, RefreshCw, CheckCircle, ArrowRight } from 'lucide-react';
 
 interface OtpVerificationPageProps {
   navigate: (page: string) => void;
@@ -14,6 +14,7 @@ export default function OtpVerificationPage({ navigate, email, isSignup, onLogin
   const [error, setError] = useState('');
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -66,9 +67,17 @@ export default function OtpVerificationPage({ navigate, email, isSignup, onLogin
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        onLogin(data.user);
+        if (isSignup) {
+          // For signup, show success message
+          setVerificationSuccess(true);
+          setError('');
+        } else {
+          // For login, store token and show success message
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          setVerificationSuccess(true);
+          setError('');
+        }
       } else {
         setError(data.message);
       }
@@ -111,6 +120,63 @@ export default function OtpVerificationPage({ navigate, email, isSignup, onLogin
       setLoading(false);
     }
   };
+
+  const handleProceedToHome = () => {
+    if (isSignup) {
+      // For signup, go back to landing page
+      navigate('landing');
+    } else {
+      // For login, proceed to landing page (home)
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      onLogin(userData);
+    }
+  };
+
+  // Show success message if verification is complete
+  if (verificationSuccess) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center px-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+          {/* Success Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {isSignup ? 'Account Created Successfully!' : 'Login Successful!'}
+            </h2>
+            
+            <p className="text-gray-600">
+              {isSignup 
+                ? 'Your account has been verified and created. You can now log in with your credentials.'
+                : 'Your email has been verified successfully. Welcome back!'
+              }
+            </p>
+          </div>
+
+          {/* Action Button */}
+          <button
+            onClick={handleProceedToHome}
+            className="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center"
+          >
+            {isSignup ? 'Go to Login' : 'Continue to Home'}
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </button>
+
+          {/* Additional Info */}
+          <div className="mt-6 p-3 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-600 text-center">
+              {isSignup 
+                ? '🎉 Welcome to our platform! Please login to get started.'
+                : '🚀 Ready to explore your personalized learning journey!'
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-red-50 flex items-center justify-center px-4">

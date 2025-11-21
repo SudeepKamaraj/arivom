@@ -155,6 +155,32 @@ const userSchema = new mongoose.Schema({
   completedCourses: {
     type: [String],
     default: []
+  },
+  // Recommendation system fields
+  recommendationProfile: {
+    questionnaire: {
+      experience: String,
+      interests: [String],
+      goals: [String],
+      timeCommitment: String,
+      learningStyle: String,
+      completedAt: Date
+    },
+    savedRecommendations: [{
+      courseId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course'
+      },
+      recommendationScore: Number,
+      recommendationReasons: [String],
+      generatedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    lastRecommendationUpdate: {
+      type: Date
+    }
   }
 }, {
   timestamps: true

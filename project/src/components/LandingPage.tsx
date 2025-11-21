@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Shield, Mail, Lock, User, Eye, EyeOff, Star, Users, BookOpen, Award, Zap, Target, Globe, Heart, TrendingUp, CheckCircle, ArrowRight, Play, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { API_CONFIG, getApiUrl } from '../config/api';
 
 interface LandingPageProps {
-  onLoginSuccess: (user: any) => void;
+  onLoginSuccess: () => void;
   onNavigateToOtp: (email: string, isSignup: boolean) => void;
 }
 
@@ -45,7 +46,7 @@ export default function LandingPage({ onLoginSuccess, onNavigateToOtp }: Landing
         const authToken = localStorage.getItem('authToken');
         if (authToken) {
           // Fetch user data to pass to onLoginSuccess
-          const response = await fetch('http://localhost:5001/api/auth/profile', {
+          const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.AUTH.PROFILE), {
             headers: {
               'Authorization': `Bearer ${authToken}`,
               'Content-Type': 'application/json'
@@ -54,10 +55,11 @@ export default function LandingPage({ onLoginSuccess, onNavigateToOtp }: Landing
           
           if (response.ok) {
             const userData = await response.json();
-            const user = userData.user || userData;
-            onLoginSuccess(user);
+            // Store user data in localStorage for the auth context to pick up
+            localStorage.setItem('user', JSON.stringify(userData.user || userData));
+            onLoginSuccess();
           } else {
-            onLoginSuccess({}); // Fallback - let the context handle user state
+            onLoginSuccess(); // Fallback - let the context handle user state
           }
         }
       } else {
@@ -91,7 +93,7 @@ export default function LandingPage({ onLoginSuccess, onNavigateToOtp }: Landing
     const timeoutId = setTimeout(() => controller.abort(), 12000);
     
     try {
-      const response = await fetch('http://localhost:5001/api/auth/signup/request-otp', {
+      const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.AUTH.SIGNUP_REQUEST_OTP), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -143,12 +145,27 @@ export default function LandingPage({ onLoginSuccess, onNavigateToOtp }: Landing
               Arivom Learning
             </h1>
           </div>
-          <button
-            onClick={() => setShowAuthModal(true)}
-            className="bg-white/10 backdrop-blur-sm text-white px-6 py-2 rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
-          >
-            Get Started
-          </button>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => {
+                setActiveTab('login');
+                setShowAuthModal(true);
+              }}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-2 rounded-full hover:from-blue-600 hover:to-blue-700 transition-all duration-300 shadow-lg font-semibold flex items-center space-x-2"
+            >
+              <User className="h-4 w-4" />
+              <span>Login</span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('signup');
+                setShowAuthModal(true);
+              }}
+              className="bg-white/10 backdrop-blur-sm text-white px-6 py-2 rounded-full hover:bg-white/20 transition-all duration-300 border border-white/20"
+            >
+              Sign Up
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -174,10 +191,14 @@ export default function LandingPage({ onLoginSuccess, onNavigateToOtp }: Landing
               <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
-              onClick={() => setShowAuthModal(true)}
-              className="bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-full text-lg font-semibold hover:bg-white/20 transition-all duration-300 border border-white/30"
+              onClick={() => {
+                setActiveTab('login');
+                setShowAuthModal(true);
+              }}
+              className="bg-white/10 backdrop-blur-sm text-white px-10 py-4 rounded-full text-lg font-semibold hover:bg-white/20 transition-all duration-300 border border-white/30 flex items-center space-x-2"
             >
-              Join Community
+              <User className="h-5 w-5" />
+              <span>Login Now</span>
             </button>
           </div>
 
@@ -569,6 +590,21 @@ export default function LandingPage({ onLoginSuccess, onNavigateToOtp }: Landing
           </div>
         </div>
       )}
+
+      {/* Floating Login Button */}
+      <div className="fixed bottom-8 right-8 z-30">
+        <button
+          onClick={() => {
+            setActiveTab('login');
+            setShowAuthModal(true);
+          }}
+          className="group bg-gradient-to-r from-red-500 to-red-600 text-white p-4 rounded-full shadow-2xl hover:from-red-600 hover:to-red-700 transform hover:scale-110 transition-all duration-300 flex items-center space-x-2"
+          title="Quick Login"
+        >
+          <User className="h-6 w-6" />
+          <span className="hidden group-hover:inline-block pr-2 font-semibold">Login</span>
+        </button>
+      </div>
     </div>
   );
 }

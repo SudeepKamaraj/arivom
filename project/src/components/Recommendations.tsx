@@ -11,9 +11,11 @@ const Recommendations: React.FC<RecommendationsProps> = ({ onCourseSelect }) => 
   const { user } = useAuth();
   const { courses } = useCourses();
   const [personalizedRecommendations, setPersonalizedRecommendations] = useState<any[]>([]);
+  const [questionnaireRecommendations, setQuestionnaireRecommendations] = useState<any[]>([]);
   const [trendingCourses, setTrendingCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [questionnaireProfile, setQuestionnaireProfile] = useState<any>(null);
 
   // Fetch personalized recommendations from API
   useEffect(() => {
@@ -36,6 +38,20 @@ const Recommendations: React.FC<RecommendationsProps> = ({ onCourseSelect }) => 
           const personalizedData = await personalizedResponse.json();
           setPersonalizedRecommendations(personalizedData.recommendations || []);
           setUserProfile(personalizedData.userProfile);
+        }
+        
+        // Fetch questionnaire-based recommendations
+        const questionnaireResponse = await fetch('http://localhost:5001/api/recommendations/questionnaire', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (questionnaireResponse.ok) {
+          const questionnaireData = await questionnaireResponse.json();
+          setQuestionnaireRecommendations(questionnaireData.recommendations || []);
+          setQuestionnaireProfile(questionnaireData.questionnaire);
         }
         
         // Fetch trending courses
@@ -478,6 +494,84 @@ const Recommendations: React.FC<RecommendationsProps> = ({ onCourseSelect }) => 
           </div>
         </div>
       )}
+
+        {/* Questionnaire-Based Recommendations */}
+        {questionnaireRecommendations.length > 0 && (
+          <section className="mb-16">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center space-x-4">
+                <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-4 rounded-2xl shadow-lg">
+                  <Brain className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                    Your Personalized Picks
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2">
+                    Based on your questionnaire responses
+                    {questionnaireProfile?.completedAt && (
+                      <span className="ml-2 text-sm text-purple-600">
+                        • Updated {new Date(questionnaireProfile.completedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 px-4 py-2 rounded-full">
+                <span className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+                  ✨ {questionnaireRecommendations.length} Matches
+                </span>
+              </div>
+            </div>
+
+            {/* Questionnaire Summary */}
+            {questionnaireProfile && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl p-6 mb-8 border border-purple-200/50 dark:border-purple-700/50">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Experience</div>
+                    <div className="font-semibold text-purple-900 dark:text-purple-100 capitalize">
+                      {questionnaireProfile.experience}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Interests</div>
+                    <div className="font-semibold text-purple-900 dark:text-purple-100">
+                      {questionnaireProfile.interests?.length || 0} Selected
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Time/Week</div>
+                    <div className="font-semibold text-purple-900 dark:text-purple-100">
+                      {questionnaireProfile.timeCommitment} hours
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-1">Style</div>
+                    <div className="font-semibold text-purple-900 dark:text-purple-100 capitalize">
+                      {questionnaireProfile.learningStyle}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {questionnaireRecommendations.slice(0, 6).map((course, index) => (
+                <div 
+                  key={course._id || course.id}
+                  className="animate-fade-in-up"
+                  style={{ animationDelay: `${index * 150}ms` }}
+                >
+                  <CourseCard course={course} recommendation={{
+                    recommendationScore: course.recommendationScore,
+                    recommendationReasons: course.recommendationReasons
+                  }} />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* AI-Powered Personalized Recommendations */}
         {personalizedRecommendations.length > 0 && (

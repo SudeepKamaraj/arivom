@@ -121,7 +121,7 @@ app.use('/api/learning', require('./routes/learning'));
 app.use('/api/peers', require('./routes/peers'));
 app.use('/api/career', require('./routes/career'));
 app.use('/api/recommendations', require('./routes/recommendations'));
-app.use('/api/chat', require('./routes/chat-advanced'));
+app.use('/api/chat', require('./routes/chat-ultra-simple')); // Ultra simple chat
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -161,7 +161,9 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('💥 Express Error Handler Triggered:');
+  console.error('Error message:', err.message);
+  console.error('Error stack:', err.stack);
   res.status(500).json({ 
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
@@ -170,15 +172,43 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log('📍 404 - Route not found:', req.method, req.originalUrl);
   res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5001;
-const HOST = process.env.HOST || '0.0.0.0'; // Important for hosting platforms
+const HOST = process.env.HOST || 'localhost'; // Changed to localhost for local development
 
-app.listen(PORT, HOST, () => {
+// Add global error handlers
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception - Server will exit:');
+  console.error('Error message:', err.message);
+  console.error('Error stack:', err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection - Server will exit:');
+  console.error('Promise:', promise);
+  console.error('Reason:', reason);
+  process.exit(1);
+});
+
+console.log('🔧 Starting server with enhanced error logging...');
+
+const server = app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on ${HOST}:${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
   console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
+  console.log('✅ Server startup completed successfully');
 });
+
+server.on('error', (err) => {
+  console.error('💥 Server error event:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Try a different port.`);
+  }
+});
+
+console.log('📡 Server instance created, waiting for startup...');

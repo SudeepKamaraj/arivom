@@ -269,35 +269,83 @@ router.get('/chat/progress', auth, async (req, res) => {
   }
 });
 
-// Helper function to process user messages
+// Helper function to process user messages using Gemini AI
 async function processUserMessage(message, userId, type) {
   const lowerMessage = message.toLowerCase();
 
   try {
+    // Initialize Gemini AI service
+    let geminiService;
+    try {
+      const GeminiAIService = require('../services/geminiAI');
+      geminiService = new GeminiAIService();
+    } catch (error) {
+      console.warn('⚠️  Gemini AI not available, using fallback responses:', error.message);
+      return getFallbackResponse(message, userId);
+    }
+
+    // Get user context for personalized responses
+    const user = await User.findById(userId);
+    const userContext = user ? {
+      name: user.firstName || user.username,
+      skills: user.skills || [],
+      interests: user.interests || [],
+      completedCourses: user.completedCourses || [],
+      enrolledCourses: user.enrolledCourses || [],
+      level: user.level || 'beginner'
+    } : null;
+
     // Course recommendation requests
     if (lowerMessage.includes('recommend') || lowerMessage.includes('suggest') || lowerMessage.includes('course')) {
-      const user = await User.findById(userId);
       if (!user) {
         return { text: "Please sign in to get personalized recommendations!" };
       }
 
-      const courses = await Course.find({ isPublished: true }).limit(3);
+      const courses = await Course.find({ isPublished: true }).limit(10);
       
       if (courses.length === 0) {
         return { text: "I'd love to recommend courses, but none are available right now. Please check back later!" };
       }
 
-      const recommendationText = `Based on your profile, here are my top recommendations:\n\n${courses.map((course, index) => 
-        `${index + 1}. **${course.title}**\n   • Level: ${course.level}\n   • Duration: ${course.duration || 'N/A'}\n   • Price: ${course.price === 0 ? 'Free' : `₹${course.price}`}\n   • Students: ${course.students || 0}\n`
-      ).join('\n')}`;
-
-      return {
-        text: recommendationText,
-        type: 'course-recommendation',
-        data: { courses: courses.map(c => c.toObject()) }
-      };
+      // Use Gemini AI for intelligent course recommendations
+      const geminiResponse = await geminiService.getCourseRecommendations(userContext, courses, message);
+      
+      if (geminiResponse.success) {
+        return {
+          text: geminiResponse.recommendations,
+          type: 'course-recommendation',
+          data: { courses: courses.slice(0, 5).map(c => c.toObject()) }
+        };
+      } else {
+        // Fallback to basic recommendations
+        return getFallbackCourseRecommendations(courses, userContext);
+      }
     }
 
+    // For general chat messages, use Gemini AI for intelligent responses
+    const geminiResponse = await geminiService.generateChatResponse(message, userContext);
+    
+    if (geminiResponse.success) {
+      return {
+        text: geminiResponse.response,
+        type: 'ai-chat'
+      };
+    } else {
+      // Fallback to rule-based responses
+      return getFallbackResponse(message, userId);
+    }
+
+  } catch (error) {
+    console.error('Message processing error:', error);
+    return getFallbackResponse(message, userId);
+  }
+}
+
+// Fallback function for when Gemini AI is not available
+async function getFallbackResponse(message, userId) {
+  const lowerMessage = message.toLowerCase();
+
+  try {
     // Study schedule requests
     if (lowerMessage.includes('schedule') || lowerMessage.includes('plan') || lowerMessage.includes('time')) {
       return {
@@ -325,7 +373,7 @@ async function processUserMessage(message, userId, type) {
       const userName = user ? (user.firstName || user.username) : 'there';
       
       return {
-        text: `Hello ${userName}! 👋 I'm your learning assistant. I can help you discover courses, create study plans, and track your progress. What would you like to explore today?`
+        text: `Hello ${userName}! 👋 I'm your AI learning assistant. I can help you discover courses, create study plans, and track your progress. What would you like to explore today?`
       };
     }
 
@@ -338,15 +386,28 @@ async function processUserMessage(message, userId, type) {
 
     // Default response with helpful suggestions
     return {
-      text: `I understand you're asking about "${message}". While I'm continuously learning to understand all queries, I excel at:\n\n• **Course recommendations** - Just say "recommend courses"\n• **Study planning** - Ask for a "study schedule"\n• **Progress tracking** - Say "show my progress"\n\nWhat would you like to explore? You can also use the quick action buttons below for instant help! 🚀`
+      text: `I understand you're asking about "${message}". I'm your AI learning assistant and I can help with:\n\n• **Course recommendations** - Just say "recommend courses"\n• **Study planning** - Ask for a "study schedule"\n• **Progress tracking** - Say "show my progress"\n• **Learning guidance** - Ask any learning-related questions\n\nWhat would you like to explore? 🚀`
     };
 
   } catch (error) {
-    console.error('Message processing error:', error);
+    console.error('Fallback response error:', error);
     return { 
-      text: "I encountered an issue processing your request. Please try again or use the quick action buttons!" 
+      text: "I'm here to help with your learning journey! Try asking about courses, study plans, or your progress." 
     };
   }
+}
+
+// Fallback course recommendations
+function getFallbackCourseRecommendations(courses, userContext) {
+  const recommendationText = `Based on your profile, here are my top recommendations:\n\n${courses.slice(0, 3).map((course, index) => 
+    `${index + 1}. **${course.title}**\n   • Level: ${course.level}\n   • Duration: ${course.duration || 'N/A'}\n   • Price: ${course.price === 0 ? 'Free' : `₹${course.price}`}\n   • Students: ${course.students || 0}\n`
+  ).join('\n')}`;
+
+  return {
+    text: recommendationText,
+    type: 'course-recommendation',
+    data: { courses: courses.slice(0, 3).map(c => c.toObject()) }
+  };
 }
 
 // Helper function to generate study schedule

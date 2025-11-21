@@ -40,24 +40,28 @@ export default function AuthenticationFlow() {
     });
   };
 
-  const handleLoginSuccess = async (user: any) => {
-    // Only new signup users need to complete skills/interests selection
-    if (authState.isSignup && (!user.skillsSelected || user.skillsSelected === false)) {
-      setAuthState(prev => ({
-        ...prev,
-        step: 'skills-interests'
-      }));
+  const handleSignupSuccess = () => {
+    // After successful signup OTP verification, redirect to login
+    setAuthState({
+      step: 'landing',
+      email: '',
+      isSignup: false
+    });
+    // Optional: Show success message
+    // You could add a state to show a success message on the landing page
+  };
+
+  const handleLoginSuccess = async () => {
+    // Always redirect to home page immediately after successful OTP verification
+    if (redirectUrl) {
+      // Clear the selected course from session storage
+      sessionStorage.removeItem('selectedCourse');
+      navigate(redirectUrl);
     } else {
-      // Existing users or login users go directly to their destination
-      if (redirectUrl) {
-        // Clear the selected course from session storage
-        sessionStorage.removeItem('selectedCourse');
-        navigate(redirectUrl);
-      } else {
-        navigate('/dashboard');
-      }
-      // No need for page reload, the context should update automatically
+      // Redirect to home page after successful login
+      navigate('/');
     }
+    // No need for page reload, the context should update automatically
   };
 
   const handleSkillsInterestsComplete = async (data: { skills: string[], interests: string[], experienceLevel: string, completedCourses: string[] }) => {
@@ -84,7 +88,7 @@ export default function AuthenticationFlow() {
           sessionStorage.removeItem('selectedCourse');
           navigate(redirectUrl);
         } else {
-          navigate('/recommendations'); // Show recommendations instead of dashboard for new users
+          navigate('/'); // Show home page instead of dashboard for new users
         }
         // No need for page reload, the context should update automatically
       } else {
@@ -93,7 +97,7 @@ export default function AuthenticationFlow() {
         if (redirectUrl) {
           navigate(redirectUrl);
         } else {
-          navigate('/dashboard');
+          navigate('/');
         }
       }
     } catch (error) {
@@ -131,6 +135,7 @@ export default function AuthenticationFlow() {
           email={authState.email}
           isSignup={authState.isSignup}
           onLoginSuccess={handleLoginSuccess}
+          onSignupSuccess={handleSignupSuccess}
         />
       );
     

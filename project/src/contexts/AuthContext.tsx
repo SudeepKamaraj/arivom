@@ -104,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Track daily login for achievements
         try {
-          await fetch('http://localhost:5001/api/achievements/check', {
+          await fetch('${API_BASE_URL}/achievements/check', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -132,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string, firstName: string, lastName: string, skills: string[], interests: string, careerObjective: string, role: string = 'student'): Promise<boolean> => {
     try {
-      const response = await fetch('http://localhost:5001/api/auth/register', {
+      const response = await fetch('${API_BASE_URL}/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = localStorage.getItem('authToken');
       if (token) {
-        await fetch('http://localhost:5001/api/auth/logout', {
+        await fetch('${API_BASE_URL}/auth/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = localStorage.getItem('authToken');
       if (!token || !user) return false;
 
-      const response = await fetch('http://localhost:5001/api/auth/profile', {
+      const response = await fetch('${API_BASE_URL}/auth/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -221,3 +221,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+

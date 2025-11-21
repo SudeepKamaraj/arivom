@@ -273,4 +273,116 @@ router.get('/similar/:courseId', async (req, res) => {
   }
 });
 
+// Save questionnaire results and recommendations
+router.post('/save-questionnaire', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { questionnaire, recommendations } = req.body;
+
+    if (!questionnaire || !recommendations) {
+      return res.status(400).json({ 
+        message: 'Questionnaire data and recommendations are required' 
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Prepare recommendation data with course validation
+    const savedRecommendations = [];
+    for (const rec of recommendations) {
+      const course = await Course.findById(rec.id);
+      if (course) {
+        savedRecommendations.push({
+          courseId: rec.id,
+          recommendationScore: rec.score || 85, // Default score if not provided
+          recommendationReasons: rec.reasons || ['Based on your questionnaire responses'],
+          generatedAt: new Date()
+        });
+      }
+    }
+
+    // Initialize recommendationProfile if it doesn't exist
+    if (!user.recommendationProfile) {
+      user.recommendationProfile = {};
+    }
+
+    // Update user's recommendation profile
+    user.recommendationProfile.questionnaire = {
+      experience: questionnaire.experience,
+      interests: questionnaire.interests || [],
+      goals: questionnaire.goals || [],
+      timeCommitment: questionnaire.timeCommitment,
+      learningStyle: questionnaire.learningStyle,
+      completedAt: new Date()
+    };
+
+    user.recommendationProfile.savedRecommendations = savedRecommendations;
+    user.recommendationProfile.lastRecommendationUpdate = new Date();
+
+    await user.save();
+
+    res.json({
+      message: 'Questionnaire and recommendations saved successfully',
+      recommendationCount: savedRecommendations.length,
+      profile: user.recommendationProfile
+    });
+
+  } catch (error) {
+    console.error('Error saving questionnaire results:', error);
+    res.status(500).json({ 
+      message: 'Failed to save questionnaire results',
+      error: error.message 
+    });
+  }
+});
+
+// Get user's questionnaire-based recommendations
+router.get('/questionnaire', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId)
+      .populate({
+        path: 'recommendationProfile.savedRecommendations.courseId',
+        model: 'Course'
+      });
+
+    if (!user || !user.recommendationProfile || !user.recommendationProfile.savedRecommendations) {
+      return res.json({
+        message: 'No questionnaire-based recommendations found',
+        recommendations: [],
+        questionnaire: null
+      });
+    }
+
+    // Format recommendations for frontend
+    const formattedRecommendations = user.recommendationProfile.savedRecommendations
+      .filter(rec => rec.courseId) // Only include recommendations with valid course references
+      .map(rec => ({
+        ...rec.courseId.toObject(),
+        recommendationScore: rec.recommendationScore,
+        recommendationReasons: rec.recommendationReasons,
+        generatedAt: rec.generatedAt,
+        source: 'questionnaire'
+      }));
+
+    res.json({
+      message: 'Questionnaire-based recommendations retrieved successfully',
+      recommendations: formattedRecommendations,
+      questionnaire: user.recommendationProfile.questionnaire,
+      lastUpdate: user.recommendationProfile.lastRecommendationUpdate
+    });
+
+  } catch (error) {
+    console.error('Error getting questionnaire recommendations:', error);
+    res.status(500).json({ 
+      message: 'Failed to get questionnaire recommendations',
+      error: error.message 
+    });
+  }
+});
+
 module.exports = router;

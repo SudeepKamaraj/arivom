@@ -58,14 +58,14 @@ export const useUserStats = () => {
         });
 
         // Fetch user's enrolled courses and progress
-        const dashboardResponse = await fetch('http://localhost:5001/api/users/dashboard', {
+        const dashboardResponse = await fetch('`${API_BASE_URL}/users/dashboard', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
 
         // Fetch user achievements
-        const achievementsResponse = await fetch('http://localhost:5001/api/achievements/user', {
+        const achievementsResponse = await fetch('`${API_BASE_URL}/achievements/user', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
