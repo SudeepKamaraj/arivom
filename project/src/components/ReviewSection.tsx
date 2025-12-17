@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Star, Filter, SortAsc, MessageSquare, Lock } from 'lucide-react';
+import { Star, Filter, SortAsc, MessageSquare, CheckCircle, ArrowUp } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import ReviewCard from './ReviewCard';
 import ReviewForm from './ReviewForm';
@@ -45,6 +45,7 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState('createdAt');
   const [filterRating, setFilterRating] = useState(0);
+  const [justCompletedAssessment, setJustCompletedAssessment] = useState(false);
 
   const fetchReviews = async (page = 1, sort = 'createdAt', rating = 0) => {
     try {
@@ -226,6 +227,20 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
     checkCanReview();
   }, [user, reviews]); // Check after reviews are loaded
 
+  // Check if assessment was just completed
+  useEffect(() => {
+    const assessmentCompleted = sessionStorage.getItem('assessmentJustCompleted');
+    if (assessmentCompleted === 'true') {
+      setJustCompletedAssessment(true);
+      // Remove the flag so it doesn't show again
+      sessionStorage.removeItem('assessmentJustCompleted');
+      // Recheck review eligibility since assessment was just completed
+      setTimeout(() => {
+        checkCanReview();
+      }, 1000);
+    }
+  }, []);
+
   const handleSubmitReview = async (reviewData: { rating: number; title: string; comment: string }) => {
     try {
       setIsSubmitting(true);
@@ -400,7 +415,33 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
         </div>
         
         <div className="flex items-center space-x-4">
-          {canReview && (
+          {canReview && justCompletedAssessment && (
+            <div className="flex flex-col space-y-3">
+              <div className="bg-gradient-to-r from-green-400 to-blue-500 rounded-xl p-6 text-white shadow-lg animate-pulse">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-white/20 rounded-full p-2">
+                    <CheckCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">🎉 Congratulations!</h3>
+                    <p className="text-white/90">You've successfully completed the course and assessment!</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowReviewForm(true);
+                    setJustCompletedAssessment(false);
+                  }}
+                  className="w-full bg-white text-gray-800 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Star className="w-5 h-5" />
+                  <span>Share Your Experience - Write a Review</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {canReview && !justCompletedAssessment && (
             <div className="flex flex-col space-y-3">
               <div className="bg-isabelline rounded-lg p-4 border-l-4 border-cyber-grape">
                 <p className="text-dark-gunmetal font-medium flex items-center">
@@ -422,37 +463,38 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ courseId, courseTitle }) 
           )}
           
           {!canReview && user && (
-            <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-400">
-              <p className="text-yellow-800 font-medium flex items-center">
-                <Lock className="w-5 h-5 text-yellow-600 mr-2" />
-                {reviews.find(review => review.user && review.user._id === ((user as any)._id || (user as any).id)) 
-                  ? 'Already Reviewed' 
-                  : 'Complete Course to Review'}
-              </p>
-              <p className="text-sm text-yellow-700 mt-2">
-                {reviews.find(review => review.user && review.user._id === ((user as any)._id || (user as any).id)) 
-                  ? 'You have already written a review for this course.' 
-                  : 'You must complete the entire course (including any assessments) before you can write a review.'}
-              </p>
-              <button
-                onClick={() => {
-                  console.log('Manually refreshing review eligibility...');
-                  checkCanReview();
-                }}
-                className="mt-3 mr-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm font-medium transition-colors"
-              >
-                Refresh Status
-              </button>
-              <button
-                onClick={async () => {
-                  console.log('Attempting to sync course completion...');
-                  await triggerCourseCompletion();
-                  setTimeout(() => checkCanReview(), 1000);
-                }}
-                className="mt-3 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium transition-colors"
-              >
-                Sync Completion
-              </button>
+            <div>
+              {reviews.find(review => review.user && review.user._id === ((user as any)._id || (user as any).id)) ? (
+                <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-400">
+                  <p className="text-green-800 font-medium flex items-center">
+                    <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
+                    Already Reviewed
+                  </p>
+                  <p className="text-sm text-green-700 mt-2">
+                    You have already written a review for this course.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-400">
+                  <p className="text-blue-800 font-medium flex items-center">
+                    <MessageSquare className="w-5 h-5 text-blue-600 mr-2" />
+                    Course Assessment Required
+                  </p>
+                  <p className="text-sm text-blue-700 mt-2">
+                    Complete all videos and pass the course assessment to unlock the review feature.
+                  </p>
+                  <button
+                    onClick={() => {
+                      // Navigate back to course to complete assessment
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="mt-3 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors inline-flex items-center space-x-2"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                    <span>Go to Assessment</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
           

@@ -4,24 +4,32 @@ import { fetchCourseraCatalog, fetchUdemyCatalog, ExternalCourseItem, generateAs
 
 export interface Lesson {
   id: string;
+  _id?: string; // MongoDB ObjectId
   title: string;
   description: string;
   duration: number; // seconds
+  url?: string;
+  thumbnail?: string;
 }
 
 export interface Course {
   id: string;
+  _id?: string; // MongoDB ObjectId
   title: string;
   description: string;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   price: number;
   duration: string; // e.g., '8h 30m'
   students: number;
-  rating: number; // 0-5
+  rating: {
+    average: number;
+    count: number;
+  } | number; // Support both old and new format
   skills: string[];
   instructor: string;
   thumbnail: string;
   lessons: Lesson[];
+  videos?: Lesson[]; // Backward compatibility
   assessments?: Array<{
     title: string;
     description: string;
@@ -32,6 +40,7 @@ export interface Course {
   provider?: 'Coursera' | 'Udemy';
   externalUrl?: string;
   previewVideoUrl?: string;
+  [key: string]: any; // Allow additional properties from backend
 }
 
 interface CourseContextType {
@@ -373,6 +382,7 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (mounted && Array.isArray(list) && list.length > 0) {
           // Map backend schema to Course type used on frontend when necessary
           const mapped: Course[] = list.map((c: any) => ({
+            ...c, // Preserve all original properties including _id
             id: c._id || c.id,
             title: c.title,
             description: c.description,
@@ -380,7 +390,7 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             price: c.price ?? 0,
             duration: typeof c.duration === 'number' ? `${Math.max(1, Math.round(c.duration/60))}h` : (c.duration || '6h'),
             students: c.rating?.count || 0,
-            rating: c.rating?.average || 4.7,
+            rating: c.rating || { average: 0, count: 0 },
             skills: c.tags || [],
             instructor: typeof c.instructor === 'string' ? c.instructor : (c.instructor?.firstName ? `${c.instructor.firstName} ${c.instructor.lastName}` : 'Instructor'),
             thumbnail: c.thumbnail || 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -505,19 +515,30 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [courses]);
 
   const updateLessonProgress = useCallback((courseId: string, lessonId: string, userId: string) => {
-    if (!userId) return;
+    if (!userId) {
+      console.log('updateLessonProgress: No userId provided');
+      return;
+    }
+    
+    console.log('updateLessonProgress called with:', { courseId, lessonId, userId });
     
     // Update the progress map for this lesson
     const lessonProgressKey = `progress_${userId}_${courseId}`;
     const progressMap = JSON.parse(localStorage.getItem(lessonProgressKey) || '{}');
+    
+    console.log('Current progress map:', progressMap);
+    console.log('Lesson already completed?', !!progressMap[lessonId]);
+    
     if (!progressMap[lessonId]) {
       progressMap[lessonId] = true;
       localStorage.setItem(lessonProgressKey, JSON.stringify(progressMap));
+      console.log('Updated progress map:', progressMap);
       
       // Check and log video completion progress
       const course = courses.find((c) => c._id === courseId || c.id === courseId);
       if (course) {
         const lessons = course.lessons || course.videos || [];
+        console.log('Course lessons:', lessons.map(l => ({ id: l._id || l.id, title: l.title })));
         if (lessons.length > 0) {
           // Count completed lessons
           const completedCount = lessons.reduce((acc, lesson) => {
@@ -525,12 +546,18 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             return acc + (progressMap[lessonId] ? 1 : 0);
           }, 0);
           
+          console.log(`Video progress: ${completedCount}/${lessons.length} lessons completed`);
+          
           // Log progress but don't auto-complete the course
           if (completedCount === lessons.length) {
             console.log('All videos completed! Video progress 100%, but course requires assessment completion.');
           }
         }
+      } else {
+        console.log('Course not found in courses array for progress update');
       }
+    } else {
+      console.log('Lesson already marked as completed, skipping update');
     }
   }, [courses]);
 

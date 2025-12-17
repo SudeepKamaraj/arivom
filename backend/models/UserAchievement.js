@@ -27,6 +27,26 @@ const UserAchievementSchema = new mongoose.Schema({
   notified: {
     type: Boolean,
     default: false
+  },
+  progressHistory: [{
+    date: {
+      type: Date,
+      default: Date.now
+    },
+    progress: Number,
+    milestone: String
+  }],
+  completionTime: {
+    type: Number, // time taken to complete in hours
+    default: null
+  },
+  attempts: {
+    type: Number,
+    default: 1
+  },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 });
 

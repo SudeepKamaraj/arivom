@@ -48,6 +48,30 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  phone: {
+    type: String,
+    default: ''
+  },
+  location: {
+    type: String,
+    default: ''
+  },
+  bio: {
+    type: String,
+    default: ''
+  },
+  website: {
+    type: String,
+    default: ''
+  },
+  linkedin: {
+    type: String,
+    default: ''
+  },
+  github: {
+    type: String,
+    default: ''
+  },
   // Gamification related fields
   xp: {
     type: Number,
@@ -99,6 +123,10 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  enrolledCourses: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course'
+  }],
   createdAt: {
     type: Date,
     default: Date.now
@@ -106,6 +134,53 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  // OTP related fields
+  otpCode: {
+    type: String
+  },
+  otpExpiresAt: {
+    type: Date
+  },
+  // Skills and interests selection flag
+  skillsSelected: {
+    type: Boolean,
+    default: false
+  },
+  experienceLevel: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'],
+    default: 'Beginner'
+  },
+  completedCourses: {
+    type: [String],
+    default: []
+  },
+  // Recommendation system fields
+  recommendationProfile: {
+    questionnaire: {
+      experience: String,
+      interests: [String],
+      goals: [String],
+      timeCommitment: String,
+      learningStyle: String,
+      completedAt: Date
+    },
+    savedRecommendations: [{
+      courseId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Course'
+      },
+      recommendationScore: Number,
+      recommendationReasons: [String],
+      generatedAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
+    lastRecommendationUpdate: {
+      type: Date
+    }
   }
 }, {
   timestamps: true

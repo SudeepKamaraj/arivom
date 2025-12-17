@@ -5,6 +5,7 @@ interface FormData {
   username: string;
   email: string;
   password: string;
+  confirmPassword: string;
   firstName: string;
   lastName: string;
   skills: string[];
@@ -19,6 +20,7 @@ const AuthPage: React.FC = () => {
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     skills: [],
@@ -28,6 +30,7 @@ const AuthPage: React.FC = () => {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
 
   const skillOptions = [
     'JavaScript', 'Python', 'React', 'Node.js', 'Data Science', 'Machine Learning',
@@ -36,10 +39,92 @@ const AuthPage: React.FC = () => {
     'Java', 'C++', 'Angular', 'Vue.js', 'PHP', 'Ruby', 'Go', 'Kotlin'
   ];
 
+  // Validation functions
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'username':
+        if (!value.trim()) return 'Username is required';
+        if (value.length < 3) return 'Username must be at least 3 characters';
+        if (value.length > 20) return 'Username must be less than 20 characters';
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores';
+        return '';
+      
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) return 'Please enter a valid email address';
+        return '';
+      
+      case 'password':
+        if (!value) return 'Password is required';
+        if (value.length < 8) return 'Password must be at least 8 characters';
+        if (!/(?=.*[a-z])/.test(value)) return 'Password must contain at least one lowercase letter';
+        if (!/(?=.*[A-Z])/.test(value)) return 'Password must contain at least one uppercase letter';
+        if (!/(?=.*\d)/.test(value)) return 'Password must contain at least one number';
+        if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(value)) return 'Password must contain at least one special character';
+        return '';
+      
+      case 'confirmPassword':
+        if (!value) return 'Please confirm your password';
+        if (value !== formData.password) return 'Passwords do not match';
+        return '';
+      
+      case 'firstName':
+        if (!value.trim()) return 'First name is required';
+        if (value.trim().length < 2) return 'First name must be at least 2 characters';
+        if (value.trim().length > 50) return 'First name must be less than 50 characters';
+        if (!/^[a-zA-Z\s]+$/.test(value.trim())) return 'First name can only contain letters';
+        return '';
+      
+      case 'lastName':
+        if (!value.trim()) return 'Last name is required';
+        if (value.trim().length < 1) return 'Last name must be at least 1 characters';
+        if (value.trim().length > 50) return 'Last name must be less than 50 characters';
+        if (!/^[a-zA-Z\s]+$/.test(value.trim())) return 'Last name can only contain letters';
+        return '';
+      
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!isLogin) {
+      // Registration validation
+      Object.keys(formData).forEach(key => {
+        if (key !== 'skills' && key !== 'interests' && key !== 'careerObjective') {
+          const error = validateField(key, formData[key as keyof typeof formData] as string);
+          if (error) errors[key] = error;
+        }
+      });
+      
+      if (selectedSkills.length === 0) {
+        errors.skills = 'Please select at least one skill';
+      }
+    } else {
+      // Login validation
+      const emailError = validateField('email', formData.email);
+      if (emailError) errors.email = emailError;
+      
+      if (!formData.password) errors.password = 'Password is required';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setFieldErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       let success = false;
@@ -53,22 +138,11 @@ const AuthPage: React.FC = () => {
           setError('Invalid email or password');
         }
       } else {
-        // Registration validation
-        if (!formData.username || !formData.firstName || !formData.lastName) {
-          setError('Please fill in all required fields');
-          return;
-        }
-        
-        if (selectedSkills.length === 0) {
-          setError('Please select at least one skill');
-          return;
-        }
-        
         success = await register(formData.username, formData.email, formData.password, formData.firstName, formData.lastName, selectedSkills, formData.interests, formData.careerObjective);
         if (success) {
           setSuccess('Registration successful! You can now login.');
           setIsLogin(true);
-          setFormData({ username: '', email: '', password: '', firstName: '', lastName: '', skills: [], interests: '', careerObjective: '' });
+          setFormData({ username: '', email: '', password: '', confirmPassword: '', firstName: '', lastName: '', skills: [], interests: '', careerObjective: '' });
           setSelectedSkills([]);
         } else {
           setError('Registration failed. User might already exist.');
@@ -80,25 +154,42 @@ const AuthPage: React.FC = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
+    }));
+
+    // Real-time validation
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: error
     }));
   };
 
   const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skill)
-        ? prev.filter(s => s !== skill)
-        : [...prev, skill]
-    );
+    const newSkills = selectedSkills.includes(skill)
+      ? selectedSkills.filter(s => s !== skill)
+      : [...selectedSkills, skill];
+    
+    setSelectedSkills(newSkills);
+    
+    // Clear skills error if at least one skill is selected
+    if (newSkills.length > 0 && fieldErrors.skills) {
+      setFieldErrors(prev => ({
+        ...prev,
+        skills: ''
+      }));
+    }
   };
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setError('');
     setSuccess('');
-    setFormData({ username: '', email: '', password: '', firstName: '', lastName: '', skills: [], interests: '', careerObjective: '' });
+    setFieldErrors({});
+    setFormData({ username: '', email: '', password: '', confirmPassword: '', firstName: '', lastName: '', skills: [], interests: '', careerObjective: '' });
     setSelectedSkills([]);
   };
 
@@ -142,10 +233,17 @@ const AuthPage: React.FC = () => {
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      fieldErrors.username ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
                     placeholder="Choose a unique username"
                     required
                   />
+                  {fieldErrors.username && (
+                    <p className="text-xs mt-1 text-red-600">
+                      {fieldErrors.username}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -158,10 +256,17 @@ const AuthPage: React.FC = () => {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        fieldErrors.firstName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="First Name"
                       required
                     />
+                    {fieldErrors.firstName && (
+                      <p className="text-xs mt-1 text-red-600">
+                        {fieldErrors.firstName}
+                      </p>
+                    )}
                   </div>
                   
                   <div>
@@ -173,10 +278,17 @@ const AuthPage: React.FC = () => {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        fieldErrors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="Last Name"
                       required
                     />
+                    {fieldErrors.lastName && (
+                      <p className="text-xs mt-1 text-red-600">
+                        {fieldErrors.lastName}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -184,7 +296,9 @@ const AuthPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Your Skills (Choose at least one) *
                   </label>
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-3 border border-gray-300 rounded-lg">
+                  <div className={`flex flex-wrap gap-2 max-h-32 overflow-y-auto p-3 border rounded-lg ${
+                    fieldErrors.skills ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}>
                     {skillOptions.map((skill) => (
                       <button
                         key={skill}
@@ -200,6 +314,11 @@ const AuthPage: React.FC = () => {
                       </button>
                     ))}
                   </div>
+                  {fieldErrors.skills && (
+                    <p className="text-xs mt-1 text-red-600">
+                      {fieldErrors.skills}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -234,33 +353,71 @@ const AuthPage: React.FC = () => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
+                Email Address *
               </label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  fieldErrors.email ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
                 placeholder="Enter your email"
                 required
               />
+              {fieldErrors.email && (
+                <p className="text-xs mt-1 text-red-600">
+                  {fieldErrors.email}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Password
+                Password *
               </label>
               <input
                 type="password"
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter your password"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                  fieldErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder={isLogin ? "Enter your password" : "Enter a strong password"}
                 required
               />
+              {fieldErrors.password && (
+                <p className="text-xs mt-1 text-red-600">
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
+
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                    fieldErrors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Confirm your password"
+                  required
+                />
+                {fieldErrors.confirmPassword && (
+                  <p className="text-xs mt-1 text-red-600">
+                    {fieldErrors.confirmPassword}
+                  </p>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"

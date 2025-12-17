@@ -23,31 +23,103 @@ const Certificate: React.FC<CertificateProps> = ({ course, onBack }) => {
   const certificateRef = useRef<HTMLDivElement>(null);
   const [certificateData, setCertificateData] = useState<CertificateData | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string>('');
 
   useEffect(() => {
     if (user && course) {
-      // Generate certificate data
+      generateCertificateData();
+    }
+  }, [user, course]);
+
+  const generateCertificateData = async () => {
+    if (!user || !course) return;
+    
+    console.log('Generating certificate data for:', { user, course });
+    
+    try {
+      // Get actual assessment score and completion data from backend
+      const token = localStorage.getItem('authToken');
+      const courseId = course._id || course.id;
+      
+      let actualScore = 95; // Default score
+      let completionDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric'
+      });
+      
+      // Try to fetch actual completion data
+      if (token && courseId) {
+        try {
+          const statusResponse = await fetch(`http://localhost:5001/api/courses/${courseId}/status`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            console.log('Course status data:', statusData);
+            
+            // Get actual assessment score if available
+            if (statusData.assessmentScore) {
+              actualScore = Math.round(statusData.assessmentScore);
+            }
+            
+            // Get actual completion date if available
+            if (statusData.completionDate) {
+              completionDate = new Date(statusData.completionDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              });
+            }
+          }
+        } catch (statusError) {
+          console.log('Could not fetch course status, using defaults:', statusError);
+        }
+      }
+      
+      // Generate certificate data with real information
       const data: CertificateData = {
-        certificateId: `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        studentName: `${user.firstName} ${user.lastName}`,
-        courseTitle: course.title,
+        certificateId: `ARIVOM-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        studentName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Student',
+        courseTitle: course.title || 'Course',
+        completionDate,
+        score: actualScore,
+        courseDuration: course.duration || '2 hours',
+        skills: course.skills || course.tags || ['Programming', 'Web Development'],
+        certificateUrl: ''
+      };
+      
+      console.log('Generated certificate data:', data);
+      setCertificateData(data);
+      
+      // Save certificate to MongoDB
+      await saveCertificateToDatabase(data);
+      
+    } catch (error) {
+      console.error('Error generating certificate data:', error);
+      
+      // Fallback data if API calls fail
+      const fallbackData: CertificateData = {
+        certificateId: `ARIVOM-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`,
+        studentName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Student',
+        courseTitle: course.title || 'Course',
         completionDate: new Date().toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
           day: 'numeric'
         }),
-        score: 95, // This would come from assessment results
+        score: 95,
         courseDuration: course.duration || '2 hours',
-        skills: course.skills || ['Programming', 'Web Development'],
+        skills: course.skills || course.tags || ['Programming', 'Web Development'],
         certificateUrl: ''
       };
-      setCertificateData(data);
       
-      // Save certificate to MongoDB
-      saveCertificateToDatabase(data);
+      console.log('Using fallback certificate data:', fallbackData);
+      setCertificateData(fallbackData);
     }
-  }, [user, course]);
+  };
 
   const saveCertificateToDatabase = async (data: CertificateData) => {
     try {
@@ -76,102 +148,55 @@ const Certificate: React.FC<CertificateProps> = ({ course, onBack }) => {
   };
 
   const handleDownload = async () => {
-    if (!certificateRef.current || !certificateData) return;
-    
+    if (!certificateRef.current || !certificateData) {
+      console.error('Certificate data or element not available');
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      // Ensure html2canvas is available
-      const html2canvas = await import('html2canvas');
-      
-      // Wait a bit for the DOM to be fully rendered
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const canvas = await html2canvas.default(certificateRef.current, {
-        scale: 3,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        allowTaint: true,
-        foreignObjectRendering: true,
-        logging: false,
-        width: certificateRef.current.offsetWidth,
-        height: certificateRef.current.offsetHeight
-      });
-      
-      // Convert to blob for better download handling
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${certificateData.studentName.replace(/\s+/g, '_')}-${certificateData.courseTitle.replace(/\s+/g, '_')}-Certificate.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          
-          // Update certificate URL in database
-          if (certificateData.certificateId) {
-            updateCertificateUrl(certificateData.certificateId, url);
-          }
+      // Import html2pdf dynamically
+      const html2pdf = (await import('html2pdf.js')).default;
+
+      // Wait briefly for fonts/images to load
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // PDF generation options
+      const options = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        filename: `${certificateData.studentName.replace(/\s+/g, '_')}-${certificateData.courseTitle.replace(/\s+/g, '_')}-Certificate.pdf`,
+        image: { type: 'jpeg' as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,   // balanced quality and size
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'landscape' as const
         }
-      }, 'image/png', 1.0);
-      
+      };
+
+      // Render and download the PDF
+      await html2pdf()
+        .set(options)
+        .from(certificateRef.current)
+        .save();
+
+      console.log('Certificate PDF generated successfully');
     } catch (error) {
-      console.error('Error generating certificate:', error);
-      // Fallback: Create a simple text-based certificate
-      const certificateText = `
-CERTIFICATE OF COMPLETION
-
-This certifies that
-${certificateData?.studentName}
-has successfully completed the course
-${certificateData?.courseTitle}
-
-Completed on: ${certificateData?.completionDate}
-Score: ${certificateData?.score}%
-Certificate ID: ${certificateData?.certificateId}
-
-Arivom - Online Learning Platform
-        `;
-        
-        const blob = new Blob([certificateText], { type: 'text/plain' });
-        const link = document.createElement('a');
-        link.download = `${certificateData?.studentName.replace(/\s+/g, '_')}-${certificateData?.courseTitle.replace(/\s+/g, '_')}-Certificate.txt`;
-        link.href = URL.createObjectURL(blob);
-        link.click();
+      console.error('Error generating PDF:', error);
+      alert('Something went wrong while generating your certificate.');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const updateCertificateUrl = async (certificateId: string, imageUrl: string) => {
-    try {
-      const token = localStorage.getItem('authToken');
-      await fetch(`http://localhost:5001/api/certificates/${certificateId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ certificateUrl: imageUrl })
-      });
-    } catch (error) {
-      console.error('Error updating certificate URL:', error);
-    }
-  };
-
-  const handleShare = () => {
-    if (navigator.share && downloadUrl) {
-      navigator.share({
-        title: `Certificate of Completion - ${certificateData?.courseTitle}`,
-        text: `I just completed ${certificateData?.courseTitle} on Arivom!`,
-        url: downloadUrl
-      });
-    } else {
-      // Fallback: Copy to clipboard
-      navigator.clipboard.writeText(`I just completed ${certificateData?.courseTitle} on Arivom!`);
-      alert('Certificate link copied to clipboard!');
-    }
+    const handleShare = async () => {
+    // Share functionality can be implemented later if needed
+    console.log('Share functionality not yet implemented');
   };
 
   if (!certificateData) {
@@ -207,83 +232,186 @@ Arivom - Online Learning Platform
         </p>
       </div>
 
-      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden max-w-5xl mx-auto">
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-auto mx-auto" style={{ maxWidth: '1000px' }}>
         {/* Certificate */}
         <div
           ref={certificateRef}
-          className="bg-gradient-to-br from-blue-50 via-white to-purple-50 p-12 text-center border-8 border-blue-600 relative overflow-hidden"
-          style={{ aspectRatio: '4/3' }}
+          style={{ 
+            backgroundColor: '#f5f3ff',
+            padding: '30px',
+            textAlign: 'center',
+            border: '8px solid #8b5cf6',
+            position: 'relative',
+            width: '900px',
+            height: '650px',
+            fontFamily: 'serif',
+            margin: '0 auto',
+            boxSizing: 'border-box',
+            overflow: 'visible'
+          }}
         >
-          {/* Background Pattern */}
-          <div className="absolute inset-0 opacity-5">
-            <div className="absolute top-10 left-10 w-32 h-32 border-4 border-blue-600 rounded-full"></div>
-            <div className="absolute bottom-10 right-10 w-24 h-24 border-4 border-purple-600 rounded-full"></div>
-            <div className="absolute top-1/2 left-1/4 w-16 h-16 border-4 border-green-600 rounded-full"></div>
-          </div>
-
-          <div className="border-2 border-blue-300 rounded-lg p-8 h-full flex flex-col justify-center relative z-10">
+          {/* Decorative Border Pattern */}
+          <div style={{ 
+            position: 'absolute', 
+            inset: '10px', 
+            border: '3px solid #a855f7',
+            background: 'repeating-linear-gradient(0deg, transparent, transparent 8px, #e0e7ff 8px, #e0e7ff 16px)',
+            opacity: '0.3'
+          }}></div>
+          
+          {/* Inner Certificate Area */}
+          <div style={{ 
+            border: '2px solid #7c3aed', 
+            backgroundColor: '#fefbff',
+            padding: '35px', 
+            height: 'calc(100% - 60px)', 
+            margin: '30px',
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'space-between',
+            position: 'relative',
+            zIndex: '10'
+          }}>
             {/* Header */}
-            <div className="mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                <Award className="w-10 h-10 text-white" />
+            <div style={{ textAlign: 'center' }}>
+              {/* Certificate Number */}
+              <div style={{
+                backgroundColor: '#8b5cf6',
+                color: 'white',
+                padding: '8px 20px',
+                display: 'inline-block',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                marginBottom: '20px',
+                fontFamily: 'serif'
+              }}>
+                No: {certificateData.certificateId.slice(-12)}
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 mb-2">
+              
+              <h1 style={{ 
+                fontSize: '42px', 
+                fontWeight: 'bold', 
+                color: '#4c1d95', 
+                marginBottom: '8px',
+                fontFamily: 'serif',
+                letterSpacing: '2px'
+              }}>
                 Certificate of Completion
-              </h2>
-              <div className="w-32 h-1 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto rounded-full"></div>
+              </h1>
             </div>
 
-            {/* Student Info */}
-            <div className="mb-8">
-              <p className="text-lg text-gray-600 mb-4">This certifies that</p>
-              <h3 className="text-3xl font-bold text-blue-600 mb-4">
+            {/* Main Content */}
+            <div style={{ textAlign: 'center', flex: '1', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <p style={{ 
+                fontSize: '16px', 
+                color: '#6b7280', 
+                marginBottom: '20px',
+                fontFamily: 'serif'
+              }}>This is to proudly certify that</p>
+              
+              <h2 style={{ 
+                fontSize: '36px', 
+                fontWeight: 'bold', 
+                fontStyle: 'italic',
+                color: '#4c1d95', 
+                marginBottom: '20px',
+                fontFamily: 'serif',
+                textDecoration: 'underline',
+                textDecorationColor: '#8b5cf6'
+              }}>
                 {certificateData.studentName}
-              </h3>
-              <p className="text-lg text-gray-600 mb-4">
-                has successfully completed the course
+              </h2>
+              
+              <p style={{ 
+                fontSize: '16px', 
+                color: '#6b7280', 
+                marginBottom: '8px',
+                fontFamily: 'serif'
+              }}>
+                Graduated from the <strong style={{ color: '#4c1d95' }}>{certificateData.courseTitle}</strong> course.
               </p>
-              <h4 className="text-2xl font-bold text-gray-900 mb-6">
-                {certificateData.courseTitle}
-              </h4>
+              
+              <p style={{ 
+                fontSize: '14px', 
+                color: '#6b7280', 
+                fontFamily: 'serif',
+                lineHeight: '1.6',
+                maxWidth: '500px',
+                margin: '0 auto'
+              }}>
+                Ability to assess candidates' hard skills and understand the requirements of hiring managers.
+              </p>
             </div>
 
-            {/* Course Details */}
-            <div className="grid grid-cols-2 gap-4 mb-6 text-sm text-gray-600">
-              <div className="flex items-center justify-center space-x-2">
-                <Calendar className="w-4 h-4" />
-                <span>{certificateData.completionDate}</span>
-              </div>
-              <div className="flex items-center justify-center space-x-2">
-                <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                <span>Score: {certificateData.score}%</span>
-              </div>
-            </div>
-
-            {/* Skills */}
-            <div className="mb-6">
-              <p className="text-sm text-gray-600 mb-2">Skills Acquired:</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {certificateData.skills.map((skill, index) => (
-                  <span key={index} className="px-3 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t-2 border-gray-300 pt-4">
-              {/* Instructor line removed */}
-              <div className="flex items-center justify-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Award className="w-5 h-5 text-white" />
+            {/* Footer Section */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              fontSize: '14px',
+              color: '#6b7280',
+              marginTop: '30px'
+            }}>
+              <div style={{ textAlign: 'left', flex: '1' }}>
+                <div style={{ fontWeight: 'bold', color: '#4c1d95', fontFamily: 'serif', fontSize: '16px' }}>
+                  Score: {certificateData.score}%
                 </div>
-                <span className="font-bold text-blue-600 text-lg">Arivom</span>
+                <div style={{ fontSize: '12px', fontFamily: 'serif' }}>Assessment Score</div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Certificate ID: {certificateData.certificateId}
-              </p>
+              
+              <div style={{ textAlign: 'center', flex: '1' }}>
+                <div style={{ 
+                  width: '80px', 
+                  height: '50px',
+                  backgroundColor: '#4c1d95',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px auto',
+                  position: 'relative'
+                }}>
+                  <div style={{ 
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '18px',
+                    fontFamily: 'serif'
+                  }}>A</div>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '5px',
+                    right: '8px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: '50%'
+                  }}></div>
+                </div>
+                <div style={{ fontWeight: 'bold', color: '#4c1d95', fontFamily: 'serif', fontSize: '18px' }}>ARIVOM</div>
+                <div style={{ fontSize: '12px', fontFamily: 'serif' }}>Online Learning Platform</div>
+              </div>
+              
+              <div style={{ textAlign: 'right', flex: '1' }}>
+                <div style={{ fontWeight: 'bold', color: '#4c1d95', fontFamily: 'serif', fontSize: '16px' }}>
+                  {certificateData.completionDate}
+                </div>
+                <div style={{ fontSize: '12px', fontFamily: 'serif' }}>Certified on</div>
+              </div>
             </div>
+            
+            {/* Certificate ID */}
+            <div style={{
+              textAlign: 'center',
+              marginTop: '20px',
+              paddingTop: '15px',
+              borderTop: '1px solid #e5e7eb'
+            }}>
+              <div style={{ fontSize: '11px', color: '#9ca3af', fontFamily: 'serif' }}>
+                Certificate ID: {certificateData.certificateId}
+              </div>
+            </div>
+
+
           </div>
         </div>
 
