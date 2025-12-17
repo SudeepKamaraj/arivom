@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
 const path = require('path');
@@ -108,9 +108,10 @@ app.use('/api/auth', require('./routes/authOTP')); // OTP authentication routes
 app.use('/api/users', require('./routes/users'));
 app.use('/api/users/profile', require('./routes/userProfile')); // User profile management
 app.use('/api/videos', require('./routes/videos'));
-// app.use('/api/video-stream', require('./routes/video-stream')); // Commented out - route doesn't exist
+app.use('/api/video-stream', require('./routes/video-stream')); // Basic video streaming
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/upload', require('./routes/upload')); // Basic upload route
 app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/reviews', require('./routes/reviews'));
