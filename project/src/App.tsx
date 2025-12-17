@@ -17,7 +17,13 @@ import AdminCourses from './components/AdminCourses';
 import Profile from './components/Profile.tsx';
 import Settings from './components/Settings.tsx';
 import AchievementsPage from './components/AchievementsPage';
-import CodeShare from './components/CodeShare';
+import PaymentDebugger from './components/PaymentDebugger';
+import CheckoutPage from './components/CheckoutPage';
+import PeerLearning from './components/PeerLearning';
+import CareerHub from './components/CareerHub';
+import InteractiveAssessments from './components/InteractiveAssessments';
+import AuthenticationFlow from './components/AuthenticationFlow';
+import ChatBot from './components/ChatBot';
 
 // Course wrapper component to handle slug-to-course resolution
 function CourseWrapper({ children }: { children: (course: any) => React.ReactNode }) {
@@ -30,9 +36,10 @@ function CourseWrapper({ children }: { children: (course: any) => React.ReactNod
     const findCourse = async () => {
       setLoading(true);
       
-      // First try to find in context courses
+      // First try to find in context courses by various IDs and slug patterns
       let foundCourse = courses.find(c => 
         c.id === courseSlug || 
+        (c as any)._id === courseSlug ||
         c.title.toLowerCase().replace(/[^a-z0-9]/g, '-') === courseSlug
       );
 
@@ -45,14 +52,14 @@ function CourseWrapper({ children }: { children: (course: any) => React.ReactNod
             headers.Authorization = `Bearer ${token}`;
           }
 
-          // Try by slug first
-          let response = await fetch(`http://localhost:5001/api/courses/slug/${courseSlug}`, {
+          // Try by courseSlug (could be MongoDB ObjectId or slug)
+          let response = await fetch(`http://localhost:5001/api/courses/${courseSlug}`, {
             headers
           });
 
+          // If that fails, try the slug endpoint
           if (!response.ok) {
-            // Fallback: try by ID
-            response = await fetch(`http://localhost:5001/api/courses/${courseSlug}`, {
+            response = await fetch(`http://localhost:5001/api/courses/slug/${courseSlug}`, {
               headers
             });
           }
@@ -98,7 +105,7 @@ function AppContent() {
 
   // Helper function to generate course slug
   const getCourseSlug = (course: any) => {
-    return course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    return (course._id || course.id) || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
   };
 
   if (loading) {
@@ -107,20 +114,36 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-isabelline dark:bg-gray-950">
-      {user && (
-        <Navigation />
-      )}
+      {user && <Navigation />}
       <main>
         <Routes>
+          {/* Home route - accessible for both authenticated and non-authenticated users */}
           <Route path="/" element={
-            <HomePage
+            <HomePage 
               onCourseSelect={(course) => {
-                const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
-                navigate(`/courses/${courseSlug}`);
+                if (!user) {
+                  // Store selected course for post-auth redirect
+                  sessionStorage.setItem('selectedCourse', JSON.stringify(course));
+                  const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                  navigate(`/auth?redirect=/courses/${courseSlug}`);
+                } else {
+                  // For authenticated users, navigate directly to course
+                  const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                  navigate(`/courses/${courseSlug}`);
+                }
               }}
             />
           } />
-          <Route path="/dashboard" element={
+          <Route path="/auth" element={
+            user ? <Navigate to="/dashboard" replace /> : <AuthenticationFlow />
+          } />
+          
+          {/* Protected routes - require authentication */}
+          {!user ? (
+            <Route path="*" element={<Navigate to="/" replace />} />
+          ) : (
+            <>
+              <Route path="/dashboard" element={
             <Dashboard
               onCourseSelect={(course) => {
                 const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -152,7 +175,10 @@ function AppContent() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/achievements" element={<AchievementsPage />} />
-          <Route path="/share" element={<CodeShare />} />
+          <Route path="/checkout/:courseId" element={<CheckoutPage />} />
+          <Route path="/peer-learning" element={<PeerLearning />} />
+          <Route path="/career-hub" element={<CareerHub />} />
+          <Route path="/assessments" element={<InteractiveAssessments courseId="all" />} />
           <Route path="/courses/:courseSlug" element={
             <CourseWrapper>
               {(course) => (
@@ -170,8 +196,17 @@ function AppContent() {
                       navigate(`/courses/${courseSlug}/assessment`);
                     }, 100);
                   }}
-                  onAssessmentComplete={() => {
-                    // This will handle the async update when returning from assessment
+                  onAssessmentComplete={(passed: boolean) => {
+                    // Trigger course status refresh when assessment is completed
+                    console.log('Assessment completed:', passed);
+                    if (passed) {
+                      // Set completion flag and trigger navigation back to course
+                      sessionStorage.setItem('assessmentJustCompleted', 'true');
+                      sessionStorage.setItem('forceRefreshCourse', 'true');
+                      // Navigate back to course page to show completion
+                      const courseSlug = course.id || course.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+                      navigate(`/courses/${courseSlug}`);
+                    }
                   }}
                   onBack={() => navigate('/dashboard')}
                 />
@@ -241,9 +276,12 @@ function AppContent() {
               )}
             </CourseWrapper>
           } />
-          <Route path="*" element={<Navigate to="/" />} />
+            </>
+          )}
         </Routes>
       </main>
+      {/* ChatBot - available on all pages */}
+      <ChatBot />
     </div>
   );
 }

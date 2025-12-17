@@ -83,7 +83,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Get correct IDs
   const courseId = course._id || course.id;
   const lessonId = lesson._id || lesson.id;
-  const userId = user?.id;
+  const userId = user?.id || user?._id;
+
+  // Debug user and lesson IDs
+  console.log('VideoPlayer Debug:', {
+    userId,
+    userObject: user,
+    lessonId,
+    courseId,
+    lesson,
+    progressKey: `progress_${userId}_${courseId}`
+  });
 
   // Build URL preference: DB lesson URL -> custom override -> course preview
   const customUrl = (typeof window !== 'undefined') ? localStorage.getItem(`custom_video_url_${lessonId}`) : null;
@@ -116,6 +126,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       // Some videos might have credits or blank endings, so 95% is a good threshold
       if (duration > 0 && newWatchedTime >= (duration * 0.95) && !isCompleted) {
         console.log(`Video ${lessonId} marked as completed at ${newWatchedTime}/${duration} seconds`);
+        console.log(`Calling updateLessonProgress with courseId: ${courseId}, lessonId: ${lessonId}, userId: ${userId}`);
         setIsCompleted(true);
         setShowCompletion(true);
         updateLessonProgress(courseId, lessonId, userId || '');

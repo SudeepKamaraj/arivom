@@ -23,7 +23,7 @@ const AchievementSchema = new mongoose.Schema({
   criteria: {
     type: {
       type: String,
-      enum: ['course_count', 'assessment_score', 'daily_streak', 'review_count', 'video_count'],
+      enum: ['course_count', 'assessment_score', 'daily_streak', 'review_count', 'video_count', 'perfect_score', 'speed_run', 'explorer', 'social_learner'],
       required: true
     },
     threshold: {
@@ -36,7 +36,15 @@ const AchievementSchema = new mongoose.Schema({
         default: false
       },
       domain: String
-    }
+    },
+    timeLimit: {
+      type: Number, // in hours
+      default: null
+    },
+    prerequisites: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Achievement'
+    }]
   },
   xpReward: {
     type: Number,
@@ -46,6 +54,37 @@ const AchievementSchema = new mongoose.Schema({
     type: String,
     enum: ['common', 'uncommon', 'rare', 'epic', 'legendary'],
     required: true
+  },
+  difficulty: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 1
+  },
+  estimatedTime: {
+    type: String,
+    default: null // e.g., "2 hours", "1 week"
+  },
+  isChained: {
+    type: Boolean,
+    default: false
+  },
+  chainedFrom: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Achievement',
+    default: null
+  },
+  tags: [{
+    type: String
+  }],
+  seasonalEvent: {
+    isEnabled: {
+      type: Boolean,
+      default: false
+    },
+    startDate: Date,
+    endDate: Date,
+    eventName: String
   },
   isActive: {
     type: Boolean,

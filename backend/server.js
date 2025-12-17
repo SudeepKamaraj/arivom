@@ -104,6 +104,9 @@ app.set('trust proxy', 1);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/auth', require('./routes/authOTP')); // OTP authentication routes
+app.use('/api/users', require('./routes/users'));
+app.use('/api/users/profile', require('./routes/userProfile')); // User profile management
 app.use('/api/videos', require('./routes/videos'));
 app.use('/api/video-stream', require('./routes/video-stream'));
 app.use('/api/courses', require('./routes/courses'));
@@ -113,7 +116,13 @@ app.use('/api/certificates', require('./routes/certificates'));
 app.use('/api/assessments', require('./routes/assessments'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/achievements', require('./routes/achievements'));
-app.use('/api/code', require('./routes/code'));
+app.use('/api/payments', require('./routes/payments'));
+app.use('/api/debug', require('./routes/debug'));
+app.use('/api/learning', require('./routes/learning'));
+app.use('/api/peers', require('./routes/peers'));
+app.use('/api/career', require('./routes/career'));
+app.use('/api/recommendations', require('./routes/recommendations'));
+app.use('/api/chat', require('./routes/chat-ultra-simple')); // Ultra simple chat
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -153,7 +162,9 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('💥 Express Error Handler Triggered:');
+  console.error('Error message:', err.message);
+  console.error('Error stack:', err.stack);
   res.status(500).json({ 
     message: 'Something went wrong!',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
@@ -162,10 +173,12 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log('📍 404 - Route not found:', req.method, req.originalUrl);
   res.status(404).json({ message: 'Route not found' });
 });
 
 const PORT = process.env.PORT || 5001;
+<<<<<<< HEAD
 const HOST = process.env.HOST || '0.0.0.0'; // Important for hosting platforms
 
 app.listen(PORT, HOST, () => {
@@ -173,4 +186,40 @@ app.listen(PORT, HOST, () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
   console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
+=======
+const HOST = process.env.HOST || 'localhost'; // Changed to localhost for local development
+
+// Add global error handlers
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception - Server will exit:');
+  console.error('Error message:', err.message);
+  console.error('Error stack:', err.stack);
+  process.exit(1);
+>>>>>>> 8e36f067dece208d7482125f894a182a473c9bd1
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection - Server will exit:');
+  console.error('Promise:', promise);
+  console.error('Reason:', reason);
+  process.exit(1);
+});
+
+console.log('🔧 Starting server with enhanced error logging...');
+
+const server = app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`🔗 Health check: http://${HOST}:${PORT}/api/health`);
+  console.log('✅ Server startup completed successfully');
+});
+
+server.on('error', (err) => {
+  console.error('💥 Server error event:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Port ${PORT} is already in use. Try a different port.`);
+  }
+});
+
+console.log('📡 Server instance created, waiting for startup...');

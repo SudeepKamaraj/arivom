@@ -180,18 +180,34 @@ class PaymentService {
   // Get payment status for a course
   async getPaymentStatus(courseId: string): Promise<PaymentStatus> {
     try {
-      const response = await fetch(`${API_BASE_URL}/payments/status/${courseId}`, {
-        headers: this.getAuthHeaders()
-      });
-
+      const url = `${API_BASE_URL}/payments/status/${courseId}`;
+      const headers = this.getAuthHeaders();
+      
+      console.log('PaymentService: Making payment status request');
+      console.log('PaymentService: URL:', url);
+      console.log('PaymentService: Auth token present:', !!localStorage.getItem('authToken'));
+      
+      const response = await fetch(url, { headers });
+      
+      console.log('PaymentService: Response status:', response.status, response.statusText);
+      
       if (!response.ok) {
         const error = await response.json();
+        console.error('PaymentService: Error response:', error);
+        
+        // If unauthorized, throw a specific error
+        if (response.status === 401) {
+          throw new Error('Please log in to check payment status');
+        }
+        
         throw new Error(error.message || 'Failed to get payment status');
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('PaymentService: Success response:', data);
+      return data;
     } catch (error) {
-      console.error('Error getting payment status:', error);
+      console.error('PaymentService: Error getting payment status:', error);
       throw error;
     }
   }
@@ -239,9 +255,29 @@ class PaymentService {
       if (isDevelopment) {
         console.log('Using test payment mode (development environment detected)');
         return this.processTestPayment(courseId);
+      console.log('Starting payment process for course:', courseId);
+      
+      // For localhost/development, offer both options
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('Development mode detected');
+        
+        // Ask user if they want to use test payment or real Razorpay
+        const useTestPayment = confirm(
+          'Development mode detected.\n\n' +
+          'Click OK for Test Payment (instant success)\n' +
+          'Click Cancel for Real Razorpay checkout (with test cards)'
+        );
+        
+        if (useTestPayment) {
+          console.log('Using test payment mode');
+          return this.processTestPayment(courseId);
+        } else {
+          console.log('Using real Razorpay checkout in development');
+          // Fall through to real Razorpay implementation
+        }
       }
       
-      // For production, use real Razorpay
+      // Real Razorpay payment flow
       const scriptLoaded = await this.loadRazorpayScript();
       if (!scriptLoaded) {
         throw new Error('Failed to load Razorpay script. Please check your internet connection.');
@@ -249,10 +285,11 @@ class PaymentService {
 
       // Create payment order
       const orderData = await this.createPaymentOrder(courseId);
+      console.log('Payment order created:', orderData);
 
       // Open Razorpay checkout
       return new Promise((resolve, reject) => {
-        console.log('Opening Razorpay checkout with options:', orderData);
+        console.log('Opening Razorpay checkout...');
         
         const options = {
           key: orderData.key,

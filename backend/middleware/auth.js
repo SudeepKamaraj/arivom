@@ -7,13 +7,19 @@ const auth = async (req, res, next) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
     if (!token) {
+      console.log('No token provided');
       return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    const user = await User.findById(decoded.userId);
+    console.log('Decoded token:', decoded);
+    
+    // Handle both userId and _id from different token formats
+    const userId = decoded.userId || decoded._id || decoded.sub;
+    const user = await User.findById(userId);
 
     if (!user || !user.isActive) {
+      console.log('User not found or inactive:', { userId, userExists: !!user, isActive: user?.isActive });
       return res.status(401).json({ message: 'Invalid token or user inactive.' });
     }
 
@@ -21,6 +27,7 @@ const auth = async (req, res, next) => {
     req.token = token;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     res.status(401).json({ message: 'Invalid token.' });
   }
 };

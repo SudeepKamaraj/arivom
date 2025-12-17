@@ -253,6 +253,14 @@ router.post('/upload', auth, async (req, res) => {
     console.error('Video upload error:', error);
     res.status(500).json({ message: 'Upload failed' });
   }
+const router = express.Router();
+
+// Video streaming route - basic implementation
+router.get('/:videoId', (req, res) => {
+  res.status(501).json({ 
+    message: 'Video streaming not implemented yet',
+    videoId: req.params.videoId 
+  });
 });
 
 module.exports = router;

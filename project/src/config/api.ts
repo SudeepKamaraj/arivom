@@ -5,7 +5,12 @@ export const API_CONFIG = {
       LOGIN: '/auth/login',
       REGISTER: '/auth/register',
       LOGOUT: '/auth/logout',
-      PROFILE: '/auth/profile'
+      PROFILE: '/auth/profile',
+      SIGNUP_REQUEST_OTP: '/auth/signup/request-otp',
+      SIGNUP_VERIFY_OTP: '/auth/signup/verify-otp',
+      LOGIN_REQUEST_OTP: '/auth/login/request-otp',
+      VERIFY_OTP: '/auth/verify-otp',
+      CHECK_AVAILABILITY: '/auth/check-availability'
     },
     COURSES: {
       LIST: '/courses',

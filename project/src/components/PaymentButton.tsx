@@ -28,23 +28,34 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
   const handlePayment = async () => {
     if (disabled || isProcessing) return;
 
+    console.log('Payment button clicked for course:', course._id);
     setIsProcessing(true);
     setPaymentStatus('processing');
 
     try {
+      console.log('Processing payment...');
       const result = await paymentService.processPayment(course._id);
+      console.log('Payment result:', result);
       
       if (result.success) {
+        console.log('Payment successful!');
         setPaymentStatus('success');
         onPaymentSuccess?.();
+        
+        // Show success message
+        alert('Payment successful! You have been enrolled in the course.');
         
         // Reset status after 3 seconds
         setTimeout(() => {
           setPaymentStatus('idle');
         }, 3000);
       } else {
+        console.log('Payment failed:', result.message);
         setPaymentStatus('error');
         onPaymentError?.(result.message);
+        
+        // Show error message
+        alert(`Payment failed: ${result.message}`);
         
         // Reset status after 3 seconds
         setTimeout(() => {
@@ -52,9 +63,13 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
         }, 3000);
       }
     } catch (error) {
+      console.error('Payment error:', error);
       setPaymentStatus('error');
       const errorMessage = error instanceof Error ? error.message : 'Payment failed';
       onPaymentError?.(errorMessage);
+      
+      // Show error message
+      alert(`Payment error: ${errorMessage}`);
       
       // Reset status after 3 seconds
       setTimeout(() => {

@@ -17,6 +17,14 @@ interface User {
   loginCount: number;
   createdAt: string;
   updatedAt: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
+  website?: string;
+  linkedin?: string;
+  github?: string;
+  xp?: number;
+  level?: number;
 }
 
 interface AuthContextType {
@@ -64,7 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (response.ok) {
         const userData = await response.json();
-        setUser(userData);
+        // Handle both direct user object and nested user object
+        const user = userData.user || userData;
+        setUser(user);
         localStorage.setItem('authToken', token);
       } else {
         // Token is invalid, remove it
@@ -95,7 +105,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Track daily login for achievements
         try {
-          await fetch(getApiUrl('achievements/check'), {
+
+          await fetch('${API_BASE_URL}/achievements/check', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -123,7 +134,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string, firstName: string, lastName: string, skills: string[], interests: string, careerObjective: string, role: string = 'student'): Promise<boolean> => {
     try {
-      const response = await fetch(getApiUrl('auth/register'), {
+
+      const response = await fetch('${API_BASE_URL}/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -153,7 +165,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const token = localStorage.getItem('authToken');
       if (token) {
-        await fetch(getApiUrl('auth/logout'), {
+
+        await fetch('${API_BASE_URL}/auth/logout', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -174,7 +187,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const token = localStorage.getItem('authToken');
       if (!token || !user) return false;
 
-      const response = await fetch(getApiUrl('auth/profile'), {
+
+      const response = await fetch('${API_BASE_URL}/auth/profile', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -212,3 +226,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </AuthContext.Provider>
   );
 };
+

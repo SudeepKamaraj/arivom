@@ -13,6 +13,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     username: '',
     email: '',
     password: '',
+    confirmPassword: '',
     firstName: '',
     lastName: '',
     skills: [] as string[],
@@ -22,6 +23,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
   const [availability, setAvailability] = useState<{
     username: { available: boolean | null; message: string };
     email: { available: boolean | null; message: string };
@@ -30,6 +32,82 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
     email: { available: null, message: '' }
   });
   const { login, register } = useAuth();
+
+  // Validation functions
+  const validateField = (name: string, value: string): string => {
+    switch (name) {
+      case 'username':
+        if (!value.trim()) return 'Username is required';
+        if (value.length < 3) return 'Username must be at least 3 characters';
+        if (value.length > 20) return 'Username must be less than 20 characters';
+        if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores';
+        return '';
+      
+      case 'email':
+        if (!value.trim()) return 'Email is required';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) return 'Please enter a valid email address';
+        return '';
+      
+      case 'password':
+        if (!value) return 'Password is required';
+        if (value.length < 8) return 'Password must be at least 8 characters';
+        if (!/(?=.*[a-z])/.test(value)) return 'Password must contain at least one lowercase letter';
+        if (!/(?=.*[A-Z])/.test(value)) return 'Password must contain at least one uppercase letter';
+        if (!/(?=.*\d)/.test(value)) return 'Password must contain at least one number';
+        if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(value)) return 'Password must contain at least one special character';
+        return '';
+      
+      case 'confirmPassword':
+        if (!value) return 'Please confirm your password';
+        if (value !== formData.password) return 'Passwords do not match';
+        return '';
+      
+      case 'firstName':
+        if (!value.trim()) return 'First name is required';
+        if (value.trim().length < 2) return 'First name must be at least 2 characters';
+        if (value.trim().length > 50) return 'First name must be less than 50 characters';
+        if (!/^[a-zA-Z\s]+$/.test(value.trim())) return 'First name can only contain letters';
+        return '';
+      
+      case 'lastName':
+        if (!value.trim()) return 'Last name is required';
+        if (value.trim().length < 1) return 'Last name must be at least 1 characters';
+        if (value.trim().length > 50) return 'Last name must be less than 50 characters';
+        if (!/^[a-zA-Z\s]+$/.test(value.trim())) return 'Last name can only contain letters';
+        return '';
+      
+      default:
+        return '';
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!isLogin) {
+      // Registration validation
+      Object.keys(formData).forEach(key => {
+        if (key !== 'skills' && key !== 'interests' && key !== 'careerObjective') {
+          const error = validateField(key, formData[key as keyof typeof formData] as string);
+          if (error) errors[key] = error;
+        }
+      });
+      
+      if (selectedSkills.length === 0) {
+        errors.skills = 'Please select at least one skill';
+      }
+    } else {
+      // Login validation
+      const emailError = validateField('email', formData.email);
+      if (emailError) errors.email = emailError;
+      
+      if (!formData.password) errors.password = 'Password is required';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const checkAvailability = async (field: 'username' | 'email', value: string) => {
     if (!value.trim()) {
@@ -77,6 +155,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+    
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -87,25 +172,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
           setError('Invalid email or password');
         }
       } else {
-        // Registration validation
-        if (!formData.username || !formData.firstName || !formData.lastName) {
-          setError('Please fill in all required fields');
-          setLoading(false);
-          return;
-        }
-        
-        if (selectedSkills.length === 0) {
-          setError('Please select at least one skill');
-          setLoading(false);
-          return;
-        }
-        
-        if (formData.password.length < 6) {
-          setError('Password must be at least 6 characters long');
-          setLoading(false);
-          return;
-        }
-        
         success = await register(formData.username, formData.email, formData.password, formData.firstName, formData.lastName, selectedSkills, formData.interests, formData.careerObjective);
         if (!success) {
           const specificError = (window as any).lastAuthError;
@@ -130,27 +196,45 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
       [name]: value
     }));
 
+    // Real-time validation
+    const error = validateField(name, value);
+    setFieldErrors(prev => ({
+      ...prev,
+      [name]: error
+    }));
+
     // Check availability for username and email fields
     if (!isLogin && (name === 'username' || name === 'email')) {
-      // Debounce the API call
-      setTimeout(() => {
-        checkAvailability(name as 'username' | 'email', value);
-      }, 500);
+      // Only check availability if field is valid
+      if (!error) {
+        setTimeout(() => {
+          checkAvailability(name as 'username' | 'email', value);
+        }, 500);
+      }
     }
   };
 
   const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev =>
-      prev.includes(skill)
-        ? prev.filter(s => s !== skill)
-        : [...prev, skill]
-    );
+    const newSkills = selectedSkills.includes(skill)
+      ? selectedSkills.filter(s => s !== skill)
+      : [...selectedSkills, skill];
+    
+    setSelectedSkills(newSkills);
+    
+    // Clear skills error if at least one skill is selected
+    if (newSkills.length > 0 && fieldErrors.skills) {
+      setFieldErrors(prev => ({
+        ...prev,
+        skills: ''
+      }));
+    }
   };
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
     setError('');
-    setFormData({ username: '', email: '', password: '', firstName: '', lastName: '', skills: [], interests: '', careerObjective: '' });
+    setFieldErrors({});
+    setFormData({ username: '', email: '', password: '', confirmPassword: '', firstName: '', lastName: '', skills: [], interests: '', careerObjective: '' });
     setSelectedSkills([]);
   };
 
@@ -188,7 +272,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                     name="username"
                     required
                     className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                      availability.username.available === false 
+                      fieldErrors.username || availability.username.available === false 
                         ? 'border-red-300 bg-red-50' 
                         : availability.username.available === true 
                         ? 'border-green-300 bg-green-50'
@@ -198,7 +282,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                     value={formData.username}
                     onChange={handleInputChange}
                   />
-                  {availability.username.message && (
+                  {fieldErrors.username && (
+                    <p className="text-xs mt-1 text-red-600">
+                      {fieldErrors.username}
+                    </p>
+                  )}
+                  {!fieldErrors.username && availability.username.message && (
                     <p className={`text-xs mt-1 ${
                       availability.username.available ? 'text-green-600' : 'text-red-600'
                     }`}>
@@ -217,11 +306,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                       id="firstName"
                       name="firstName"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        fieldErrors.firstName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="First Name"
                       value={formData.firstName}
                       onChange={handleInputChange}
                     />
+                    {fieldErrors.firstName && (
+                      <p className="text-xs mt-1 text-red-600">
+                        {fieldErrors.firstName}
+                      </p>
+                    )}
                   </div>
                   
                   <div>
@@ -233,11 +329,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                       id="lastName"
                       name="lastName"
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        fieldErrors.lastName ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                      }`}
                       placeholder="Last Name"
                       value={formData.lastName}
                       onChange={handleInputChange}
                     />
+                    {fieldErrors.lastName && (
+                      <p className="text-xs mt-1 text-red-600">
+                        {fieldErrors.lastName}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -245,7 +348,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Select Your Skills (Choose at least one) *
                   </label>
-                  <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border border-gray-300 rounded-lg">
+                  <div className={`flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 border rounded-lg ${
+                    fieldErrors.skills ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}>
                     {skillOptions.map((skill) => (
                       <button
                         key={skill}
@@ -261,6 +366,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                       </button>
                     ))}
                   </div>
+                  {fieldErrors.skills && (
+                    <p className="text-xs mt-1 text-red-600">
+                      {fieldErrors.skills}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -291,7 +401,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address
+                Email Address *
               </label>
               <input
                 type="email"
@@ -299,7 +409,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 name="email"
                 required
                 className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  !isLogin && availability.email.available === false 
+                  fieldErrors.email || (!isLogin && availability.email.available === false) 
                     ? 'border-red-300 bg-red-50' 
                     : !isLogin && availability.email.available === true 
                     ? 'border-green-300 bg-green-50'
@@ -309,7 +419,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
                 value={formData.email}
                 onChange={handleInputChange}
               />
-              {!isLogin && availability.email.message && (
+              {fieldErrors.email && (
+                <p className="text-xs mt-1 text-red-600">
+                  {fieldErrors.email}
+                </p>
+              )}
+              {!fieldErrors.email && !isLogin && availability.email.message && (
                 <p className={`text-xs mt-1 ${
                   availability.email.available ? 'text-green-600' : 'text-red-600'
                 }`}>
@@ -320,20 +435,51 @@ const AuthModal: React.FC<AuthModalProps> = ({ onClose }) => {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
+                Password *
               </label>
               <input
                 type="password"
                 id="password"
                 name="password"
                 required
-                minLength={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your password (min 6 characters)"
+                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  fieldErrors.password ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                }`}
+                placeholder={isLogin ? "Enter your password" : "Enter a strong password"}
                 value={formData.password}
                 onChange={handleInputChange}
               />
+              {fieldErrors.password && (
+                <p className="text-xs mt-1 text-red-600">
+                  {fieldErrors.password}
+                </p>
+              )}
             </div>
+
+            {!isLogin && (
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                  Confirm Password *
+                </label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    fieldErrors.confirmPassword ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                />
+                {fieldErrors.confirmPassword && (
+                  <p className="text-xs mt-1 text-red-600">
+                    {fieldErrors.confirmPassword}
+                  </p>
+                )}
+              </div>
+            )}
 
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
