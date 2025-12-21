@@ -303,6 +303,8 @@ node chatbot_success_demo.js
 ## 👥 Contributors
 
 - **Sudeep Kamaraj** - Project Lead
+- **Sowmiya M V** - Project member
+- **Varnika S** - Project member
 
 ## 📄 License
 
